@@ -14,9 +14,9 @@
 "uuid %s id %s\n"
 3. client generate map
 4. server send game status
-    - player: send whenever it updates
-    game tick, uuid, position, direction, health, fire
-    "p t %d uuid %s p %d %d d %d h %d f %b\n"
-    - bullet: send whenever it updates
-    game tick, from uuid, position, direction, health(only 1 or 0)
-    "b t %d uuid %s p %d %d d %d h %b\n"
+    - player:
+        - uuid, position, direction, health, fire, fire_cd
+        - "p u %s p %d %d d %d h %d f %b %d"
+    - bullet: 
+        - uuid, owner_id, position, direction, health(only 1 or 0)
+        - "b u %s p %d %d d %d h %b o %s"
