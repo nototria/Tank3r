@@ -3,25 +3,25 @@
 #include<string>
 #include<iostream>
 #include<nlohmann/json.hpp>
-struct Vector2{
+struct Position{
     int x,y;
-    Vector2();
-    Vector2(int, int);
-    Vector2& operator+=(const Vector2);
-    Vector2& operator-=(const Vector2);
-    Vector2 operator+(const Vector2) const;
-    Vector2 operator-(const Vector2) const;
-    Vector2 operator-() const;
-    friend std::ostream& operator<<(std::ostream&, const Vector2 &);
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Vector2,x,y)
+    Position();
+    Position(int, int);
+    Position& operator+=(const Position);
+    Position& operator-=(const Position);
+    Position operator+(const Position) const;
+    Position operator-(const Position) const;
+    Position operator-() const;
+    friend std::ostream& operator<<(std::ostream&, const Position &);
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Position,x,y)
 };
-const Vector2 unit_move[4]={
+const Position unit_move[4]={
     {-1,0},{0,1},{1,0},{0,-1}
 };
 struct GameEntity{
     std::string id;
     enum EntityType{none,player,bullet} type;
-    Vector2 pos;
+    Position pos;
     enum EntityRota{up, right, down, left} rota;
     int health;
 
