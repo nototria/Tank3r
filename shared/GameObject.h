@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <chrono>
 
 #define RESET_COLOR "\033[0m"
 #define RED_COLOR "\033[31m"
@@ -13,6 +14,34 @@
 
 enum class Direction {Right, Left, Up, Down};
 enum class GameState {TitleScreen, UsernameInput, GameLoop, EndScreen};
+enum class MapObjectType {Wall,Water};
+// game timer
+class GameTimer {
+private:
+    std::chrono::steady_clock::time_point lastTime;
+    double accumulator; // Accumulated time for fixed updates
+    const double tickRate; // Fixed update rate (in seconds)
+
+public:
+    GameTimer(double tickRateInSeconds)
+        : tickRate(tickRateInSeconds), accumulator(0) {
+        lastTime = std::chrono::steady_clock::now();
+    }
+
+    // Calculate elapsed time and update the accumulator
+    bool shouldUpdate() {
+        auto currentTime = std::chrono::steady_clock::now();
+        double elapsedTime = std::chrono::duration<double>(currentTime - lastTime).count();
+        lastTime = currentTime;
+
+        accumulator += elapsedTime;
+        if (accumulator >= tickRate) {
+            accumulator -= tickRate;
+            return true; // Perform an update
+        }
+        return false; // Not enough time has passed for an update
+    }
+};
 
 // GameObject
 class GameObject {
@@ -101,6 +130,30 @@ public:
             } else {
                 ++it;
             }
+        }
+    }
+};
+
+// MapObjects
+class MapObject {
+private:
+    int x;
+    int y;
+    MapObjectType type;
+
+public:
+    MapObject(int x, int y, MapObjectType type) : x(x), y(y), type(type) {}
+
+    int getX() const { return x; }
+    int getY() const { return y; }
+    MapObjectType getType() const { return type; }
+    bool isBlocking() const {return type == MapObjectType::Wall;}
+
+    char getSymbol() const {
+        switch (type) {
+            case MapObjectType::Wall: return '#'; // Wall symbol
+            case MapObjectType::Water: return '~'; // Water symbol
+            default: return ' ';
         }
     }
 };
