@@ -39,11 +39,6 @@ public:
         x = newX;
         y = newY;
     }
-
-    // Render GameObject (can be overridden)
-    virtual void render() const {
-        std::cout << "Rendering GameObject at (" << x << ", " << y << ")" << std::endl;
-    }
 };
 
 // Tank class derived from GameObject
