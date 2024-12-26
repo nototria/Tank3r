@@ -15,6 +15,7 @@
 enum class Direction {Right, Left, Up, Down};
 enum class GameState {TitleScreen, UsernameInput, GameLoop, EndScreen};
 enum class MapObjectType {Wall,Water};
+
 // game timer
 class GameTimer {
 private:
@@ -40,6 +41,30 @@ public:
             return true; // Perform an update
         }
         return false; // Not enough time has passed for an update
+    }
+};
+
+// MapObjects
+class MapObject {
+private:
+    int x;
+    int y;
+    MapObjectType type;
+
+public:
+    MapObject(int x, int y, MapObjectType type) : x(x), y(y), type(type) {}
+
+    int getX() const { return x; }
+    int getY() const { return y; }
+    MapObjectType getType() const { return type; }
+    bool isBlocking() const {return type == MapObjectType::Wall;}
+
+    char getSymbol() const {
+        switch (type) {
+            case MapObjectType::Wall: return '#'; // Wall symbol
+            case MapObjectType::Water: return '~'; // Water symbol
+            default: return ' ';
+        }
     }
 };
 
@@ -73,16 +98,34 @@ public:
 class Bullet : public GameObject {
 private:
     Direction direction;
+    bool active;
 
 public:
-    Bullet(int x, int y, Direction dir) : GameObject(x, y), direction(dir) {}
+    Bullet(int x, int y, Direction dir) : GameObject(x, y), direction(dir), active(true){}
 
-    void move() {
+    void move(int width, int height, const std::vector<MapObject>& staticObjects) {
+        if (!active) return;
+
+        int nextX = x;
+        int nextY = y;
+
+        // Determine next position
         switch (direction) {
-            case Direction::Up:    y -= 1; break;
-            case Direction::Down:  y += 1; break;
-            case Direction::Left:  x -= 1; break;
-            case Direction::Right: x += 1; break;
+            case Direction::Up:    nextY -= 1; break;
+            case Direction::Down:  nextY += 1; break;
+            case Direction::Left:  nextX -= 1; break;
+            case Direction::Right: nextX += 1; break;
+        }
+
+        // Check for collisions or out-of-bounds
+        if (nextX <= 0 || nextX >= width - 1 || 
+            nextY <= 0 || nextY >= height - 1 || 
+            checkCollision(nextX, nextY, staticObjects)) {
+            active = false;
+        } else {
+            // Update position
+            x = nextX;
+            y = nextY;
         }
     }
 
@@ -90,6 +133,8 @@ public:
         return x <= 0 || x >= width - 1 || y <= 0 || y >= height - 1;
     }
 
+    bool isActive() const { return active; }
+    
     wchar_t getSymbol() const {
         return L'*'; // Symbol for the bullet
     }
@@ -120,40 +165,24 @@ public:
     void setColor(const std::string& newColor) {color = newColor;}
 
     // bullet control
-    void fireBullet() {bullets.emplace_back(x, y, direction);}
+    void fireBullet() { bullets.emplace_back(x, y, direction); }
     std::vector<Bullet>& getBullets() { return bullets; }
-    void updateBullets(int width, int height) {
+    void updateBullets(int width, int height, const std::vector<MapObject>& staticObjects) {
         for (auto it = bullets.begin(); it != bullets.end();) {
-            it->move();
-            if (it->isOutOfBounds(width, height)) {
+            it->move(width, height, staticObjects);
+            if (!it->isActive()) {
                 it = bullets.erase(it);
             } else {
                 ++it;
             }
         }
     }
-};
-
-// MapObjects
-class MapObject {
-private:
-    int x;
-    int y;
-    MapObjectType type;
-
-public:
-    MapObject(int x, int y, MapObjectType type) : x(x), y(y), type(type) {}
-
-    int getX() const { return x; }
-    int getY() const { return y; }
-    MapObjectType getType() const { return type; }
-    bool isBlocking() const {return type == MapObjectType::Wall;}
-
-    char getSymbol() const {
-        switch (type) {
-            case MapObjectType::Wall: return '#'; // Wall symbol
-            case MapObjectType::Water: return '~'; // Water symbol
-            default: return ' ';
+    void render(WINDOW* win) const {
+        mvwaddch(win, y, x, getDirectionSymbol());
+        for (const auto& bullet : bullets) {
+            if (bullet.isActive()) {
+                mvwaddch(win, bullet.getY(), bullet.getX(), bullet.getSymbol());
+            }
         }
     }
 };
