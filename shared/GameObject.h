@@ -42,46 +42,27 @@ class Tank : public GameObject {
 private:
     Direction direction;
     std::string color;
-
-    // Convert direction to ASCII character for rendering
-    int getDirectionSymbol() const {
+    wchar_t getDirectionSymbol() const {
         switch (direction) {
-            case Direction::Right: return '⊢';
-            case Direction::Left:  return '⊣';
-            case Direction::Up:    return '⊥';
-            case Direction::Down:  return '⊤';
-            default: return '?';
+            case Direction::Right: return L'⊢';
+            case Direction::Left:  return L'⊣';
+            case Direction::Up:    return L'⊥';
+            case Direction::Down:  return L'⊤';
+            default: return L'?';
         }
     }
 
 public:
-    // Constructor
     Tank(int x, int y, Direction dir = Direction::Up, const std::string& color = RESET_COLOR)
         : GameObject(x, y), direction(dir), color(color) {}
 
-    // Set tank direction
-    void setDirection(Direction dir) {
-        direction = dir;
-    }
+    // function
+    void setDirection(Direction dir){direction = dir;}
 
-    // Get tank direction
     Direction getDirection() const { return direction; }
 
-    // Set tank color
-    void setColor(const std::string& newColor) {
-        color = newColor;
-    }
+    void setColor(const std::string& newColor){color = newColor;}
 
-    // Render function
-    void render() const override {
-        std::cout << color
-                  << "Rendering Tank at (" << x << ", " << y << ") facing "
-                  << (direction == Direction::Right ? "right" :
-                      direction == Direction::Left ? "left" :
-                      direction == Direction::Up ? "up" : "down")
-                  << " [" << getDirectionSymbol() << "]"
-                  << RESET_COLOR << std::endl;
-    }
 };
 
 #endif // GAMEOBJECT_H
