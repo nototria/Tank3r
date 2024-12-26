@@ -6,12 +6,9 @@
 #include <vector>
 #include <chrono>
 
-#define RESET_COLOR "\033[0m"
-#define RED_COLOR "\033[31m"
-#define GREEN_COLOR "\033[32m"
-#define BLUE_COLOR "\033[34m"
-#define YELLOW_COLOR "\033[33m"
-
+#define RED 1069
+#define GREEN 2069
+#define BLUE 3069
 enum class Direction {Right, Left, Up, Down};
 enum class GameState {TitleScreen, UsernameInput, GameLoop, EndScreen};
 enum class MapObjectType {Wall,Water};
@@ -153,7 +150,7 @@ public:
 class Tank : public GameObject {
 private:
     Direction direction;
-    std::string color;
+    int color;
     std::vector<Bullet> bullets;
 
 public:
@@ -167,11 +164,12 @@ public:
         }
     }
     // Tank own element
-    Tank(int x, int y, Direction dir = Direction::Up, const std::string& color = RESET_COLOR)
+    Tank(int x, int y, Direction dir = Direction::Up, int color = 1)
         : GameObject(x, y), direction(dir), color(color) {}
     void setDirection(Direction dir) {direction = dir;}
     Direction getDirection() const { return direction; }
-    void setColor(const std::string& newColor) {color = newColor;}
+    void setColor(const int& newColor) {color = newColor;}
+    int getColor() {return color;}
 
     // bullet control
     void fireBullet() { bullets.emplace_back(x, y, direction); }
@@ -183,14 +181,6 @@ public:
                 it = bullets.erase(it);
             } else {
                 ++it;
-            }
-        }
-    }
-    void render(WINDOW* win) const {
-        mvwaddch(win, y, x, getDirectionSymbol());
-        for (const auto& bullet : bullets) {
-            if (bullet.isActive()) {
-                mvwaddch(win, bullet.getY(), bullet.getX(), bullet.getSymbol());
             }
         }
     }
