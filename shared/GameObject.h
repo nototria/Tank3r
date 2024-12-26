@@ -103,6 +103,15 @@ private:
 public:
     Bullet(int x, int y, Direction dir) : GameObject(x, y), direction(dir), active(true){}
 
+    static bool checkCollision(int x, int y, const std::vector<MapObject>& staticObjects) {
+        for (const auto& obj : staticObjects) {
+            if (obj.isBlocking() && obj.getX() == x && obj.getY() == y) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
     void move(int width, int height, const std::vector<MapObject>& staticObjects) {
         if (!active) return;
 
