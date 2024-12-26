@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
 
 #define RESET_COLOR "\033[0m"
 #define RED_COLOR "\033[31m"
@@ -39,33 +40,6 @@ public:
     }
 };
 
-// Tank
-class Tank : public GameObject {
-private:
-    Direction direction;
-    std::string color;
-
-    wchar_t getDirectionSymbol() const {
-        switch (direction) {
-            case Direction::Right: return L'⊢';
-            case Direction::Left:  return L'⊣';
-            case Direction::Up:    return L'⊥';
-            case Direction::Down:  return L'⊤';
-            default: return L'?';
-        }
-    }
-
-public:
-    Tank(int x, int y, Direction dir = Direction::Up, const std::string& color = RESET_COLOR)
-        : GameObject(x, y), direction(dir), color(color) {}
-
-    void setDirection(Direction dir) {direction = dir;}
-
-    Direction getDirection() const { return direction; }
-
-    void setColor(const std::string& newColor) {color = newColor;}
-};
-
 // Bullet
 class Bullet : public GameObject {
 private:
@@ -89,6 +63,45 @@ public:
 
     wchar_t getSymbol() const {
         return L'*'; // Symbol for the bullet
+    }
+};
+
+// Tank
+class Tank : public GameObject {
+private:
+    Direction direction;
+    std::string color;
+    std::vector<Bullet> bullets;
+
+public:
+    wchar_t getDirectionSymbol() const {
+        switch (direction) {
+            case Direction::Right: return L'⊢';
+            case Direction::Left:  return L'⊣';
+            case Direction::Up:    return L'⊥';
+            case Direction::Down:  return L'⊤';
+            default: return L'?';
+        }
+    }
+    // Tank own element
+    Tank(int x, int y, Direction dir = Direction::Up, const std::string& color = RESET_COLOR)
+        : GameObject(x, y), direction(dir), color(color) {}
+    void setDirection(Direction dir) {direction = dir;}
+    Direction getDirection() const { return direction; }
+    void setColor(const std::string& newColor) {color = newColor;}
+
+    // bullet control
+    void fireBullet() {bullets.emplace_back(x, y, direction);}
+    std::vector<Bullet>& getBullets() { return bullets; }
+    void updateBullets(int width, int height) {
+        for (auto it = bullets.begin(); it != bullets.end();) {
+            it->move();
+            if (it->isOutOfBounds(width, height)) {
+                it = bullets.erase(it);
+            } else {
+                ++it;
+            }
+        }
     }
 };
 
