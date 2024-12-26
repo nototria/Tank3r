@@ -11,13 +11,9 @@
 #define YELLOW_COLOR "\033[33m"
 
 enum class Direction {Right, Left, Up, Down};
-enum class GameState {
-    TitleScreen,
-    UsernameInput,
-    GameLoop,
-    EndScreen
-};
+enum class GameState {TitleScreen, UsernameInput, GameLoop, EndScreen};
 
+// GameObject
 class GameObject {
 protected:
     int x;
@@ -43,13 +39,12 @@ public:
     }
 };
 
-// Tank class derived from GameObject
+// Tank
 class Tank : public GameObject {
 private:
     Direction direction;
     std::string color;
 
-    // Convert direction to wide character symbol for rendering
     wchar_t getDirectionSymbol() const {
         switch (direction) {
             case Direction::Right: return L'⊢';
@@ -61,21 +56,39 @@ private:
     }
 
 public:
-    // Constructor
     Tank(int x, int y, Direction dir = Direction::Up, const std::string& color = RESET_COLOR)
         : GameObject(x, y), direction(dir), color(color) {}
 
-    // Set tank direction
-    void setDirection(Direction dir) {
-        direction = dir;
-    }
+    void setDirection(Direction dir) {direction = dir;}
 
-    // Get tank direction
     Direction getDirection() const { return direction; }
 
-    // Set tank color
-    void setColor(const std::string& newColor) {
-        color = newColor;
+    void setColor(const std::string& newColor) {color = newColor;}
+};
+
+// Bullet
+class Bullet : public GameObject {
+private:
+    Direction direction;
+
+public:
+    Bullet(int x, int y, Direction dir) : GameObject(x, y), direction(dir) {}
+
+    void move() {
+        switch (direction) {
+            case Direction::Up:    y -= 1; break;
+            case Direction::Down:  y += 1; break;
+            case Direction::Left:  x -= 1; break;
+            case Direction::Right: x += 1; break;
+        }
+    }
+
+    bool isOutOfBounds(int width, int height) const {
+        return x <= 0 || x >= width - 1 || y <= 0 || y >= height - 1;
+    }
+
+    wchar_t getSymbol() const {
+        return L'*'; // Symbol for the bullet
     }
 };
 
