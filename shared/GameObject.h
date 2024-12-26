@@ -4,47 +4,31 @@
 #include <iostream>
 #include <string>
 
-// ANSI escape codes for colors
 #define RESET_COLOR "\033[0m"
 #define RED_COLOR "\033[31m"
 #define GREEN_COLOR "\033[32m"
 #define BLUE_COLOR "\033[34m"
 #define YELLOW_COLOR "\033[33m"
 
-// Enum for tank directions
-enum class Direction {
-    Right, // Corresponds to '⊢'
-    Left,  // Corresponds to '⊣'
-    Up,    // Corresponds to '⊥'
-    Down   // Corresponds to '⊤'
-};
+enum class Direction {Right, Left, Up, Down};
 
-// Base class: GameObject
 class GameObject {
 protected:
-    int x; // X-coordinate of the object
-    int y; // Y-coordinate of the object
+    int x;
+    int y;
 
 public:
-    // Constructor
     GameObject(int x = 0, int y = 0) : x(x), y(y) {}
-
-    // Virtual destructor
     virtual ~GameObject() {}
 
-    // Getters for position
     int getX() const { return x; }
     int getY() const { return y; }
 
-    // Setters for position
-    void setX(int newX) { x = newX; }
-    void setY(int newY) { y = newY; }
-    void setPosition(int newX, int newY) {
+    // function
+    void setPosition(int newX, int newY){
         x = newX;
         y = newY;
     }
-
-    // Virtual render function
     virtual void render() const {
         std::cout << "Rendering GameObject at (" << x << ", " << y << ")" << std::endl;
     }
@@ -53,11 +37,11 @@ public:
 // Derived class: Tank
 class Tank : public GameObject {
 private:
-    Direction direction; // Direction of the tank
-    std::string color;   // Color code using ANSI escape sequences
+    Direction direction;
+    std::string color;
 
     // Convert direction to ASCII character for rendering
-    char getDirectionSymbol() const {
+    int getDirectionSymbol() const {
         switch (direction) {
             case Direction::Right: return '⊢';
             case Direction::Left:  return '⊣';
