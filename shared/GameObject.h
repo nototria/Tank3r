@@ -49,15 +49,34 @@ private:
     Direction direction;
     std::string color;
 
+    // Convert direction to wide character symbol for rendering
+    wchar_t getDirectionSymbol() const {
+        switch (direction) {
+            case Direction::Right: return L'⊢';
+            case Direction::Left:  return L'⊣';
+            case Direction::Up:    return L'⊥';
+            case Direction::Down:  return L'⊤';
+            default: return L'?';
+        }
+    }
+
 public:
     // Constructor
-    Tank(int x, int y, Direction dir = Direction::Up, const std::string& color = "\033[0m")
+    Tank(int x, int y, Direction dir = Direction::Up, const std::string& color = RESET_COLOR)
         : GameObject(x, y), direction(dir), color(color) {}
 
     // Set tank direction
-    void setDirection(Direction dir) {direction = dir;}
+    void setDirection(Direction dir) {
+        direction = dir;
+    }
+
     // Get tank direction
     Direction getDirection() const { return direction; }
+
+    // Set tank color
+    void setColor(const std::string& newColor) {
+        color = newColor;
+    }
 };
 
 #endif // GAMEOBJECT_H
