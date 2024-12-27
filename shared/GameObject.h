@@ -146,6 +146,8 @@ class Tank : public GameObject {
 private:
     Direction direction;
     int color;
+    int hp;
+    std::string name;
     std::vector<Bullet> bullets;
 
 public:
@@ -159,12 +161,33 @@ public:
         }
     }
     // Tank own element
-    Tank(int x, int y, Direction dir = Direction::Up, int color = 1)
-        : GameObject(x, y), direction(dir), color(color) {}
+    Tank(int x, int y, Direction dir = Direction::Up, int color = COLOR_BLUE, int hp = 20, const std::string& name = "Player")
+        : GameObject(x, y), direction(dir), color(color), hp(hp), name(name) {}
+    static std::vector<Tank> createTanks(int playerNum, const std::string remotePlayerNames[], int gridWidth, int gridHeight) {
+        std::vector<Tank> tanks;
+        int startX = gridWidth / 2;
+        int startY = gridHeight / 2;
+
+        for (int i = 0; i < playerNum; ++i) {
+            // Create each tank with a name and set positions
+            tanks.emplace_back(startX + (i * 2), startY + (i * 2), Direction::Right, COLOR_BLUE, remotePlayerNames[i]);
+        }
+
+        return tanks;
+    }
+
     void setDirection(Direction dir) {direction = dir;}
     Direction getDirection() const { return direction; }
+
+    int getHP() const { return hp; }
+    void setHP(int newHP) { hp = newHP; }
+
+    void setName(const std::string& newName) {name = newName;}
+    std::string getName() const {return name;}
+
     void setColor(const int& newColor) {color = newColor;}
     int getColor() {return color;}
+
     static bool checkTankCollision(int nextX, int nextY, const std::vector<MapObject>& staticObjects) {
         for (const auto& obj : staticObjects) {
             if (obj.isObstacle() && obj.getX() == nextX && obj.getY() == nextY) {return true;}
