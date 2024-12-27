@@ -3,34 +3,6 @@
 #include<iostream>
 #include<nlohmann/json.hpp>
 //================================================================
-//Vector2
-
-Vector2::Vector2(): x(0), y(0){}
-Vector2::Vector2(int _x, int _y): x(_x), y(_y){}
-Vector2& Vector2::operator+=(Vector2 other){
-    this->x+=other.x;
-    this->y+=other.y;
-    return *this;
-}
-Vector2& Vector2::operator-=(Vector2 other){
-    this->x-=other.x;
-    this->y-=other.y;
-    return *this;
-}
-Vector2 Vector2::operator+(Vector2 other) const{
-    return Vector2(this->x+other.x,this->y+other.y);
-}
-Vector2 Vector2::operator-(Vector2 other) const{
-    return Vector2(this->x-other.x,this->y-other.y);
-}
-Vector2 Vector2::operator-() const{
-    return Vector2(-this->x,-this->y);
-}
-std::ostream& operator<<(std::ostream& out, const Vector2 &obj){
-    out<<'('<<obj.x<<", "<<obj.y<<')';
-    return out;
-}
-//================================================================
 //GameEntity
 GameEntity::GameEntity(){
     this->type=none;
