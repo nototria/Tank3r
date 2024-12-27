@@ -16,7 +16,7 @@ const int statusBlockWidth = 25;
 const int statusBlockHeight = 10; 
 enum class Direction {Right, Left, Up, Down};
 enum class GameState {TitleScreen, UsernameInput, GameLoop, EndScreen};
-enum class MapObjectType {wall,water,bullet,tank};
+enum class MapObjectType {empty, wall,water,bullet,tank};
 
 // game timer
 class GameTimer {
@@ -44,6 +44,36 @@ public:
     }
 };
 
+// GameObject
+class GameObject {
+protected:
+    int x;
+    int y;
+    MapObjectType type;
+
+public:
+    GameObject(int x = 0, int y = 0,MapObjectType type = MapObjectType::empty) : x(x), y(y), type(type) {}
+    virtual ~GameObject() {}
+
+    // function
+    void setX(int newX) { x = newX; }
+    void setY(int newY) { y = newY; }
+
+    int getX() const { return x; }
+    int getY() const { return y; }
+
+    void setPosition(int newX, int newY){
+        x = newX;
+        y = newY;
+    }
+
+    MapObjectType getType() const { return type; }
+
+    virtual void render() const {
+        std::cout << "Rendering GameObject at (" << x << ", " << y << ")" << std::endl;
+    }
+};
+
 // MapObjects
 class MapObject : public GameObject{
 public:
@@ -63,32 +93,6 @@ public:
     }
 };
 
-// GameObject
-class GameObject {
-protected:
-    int x;
-    int y;
-    MapObjectType type;
-public:
-    GameObject(int x = 0, int y = 0, MapObjectType type) : x(x), y(y), type(type) {}
-    virtual ~GameObject() {}
-
-    // function
-    void setX(int newX) { x = newX; }
-    void setY(int newY) { y = newY; }
-
-    int getX() const { return x; }
-    int getY() const { return y; }
-
-    void setPosition(int newX, int newY){
-        x = newX;
-        y = newY;
-    }
-    virtual void render() const {
-        std::cout << "Rendering GameObject at (" << x << ", " << y << ")" << std::endl;
-    }
-};
-
 // Bullet
 class Bullet : public GameObject {
 private:
@@ -96,7 +100,7 @@ private:
     bool active;
 
 public:
-    Bullet(int x, int y, MapObjectType type = MapObjectType :: bullet, Direction dir) : GameObject(x, y, type), direction(dir), active(true){}
+    Bullet(int x, int y, Direction dir) : GameObject(x, y, MapObjectType :: bullet), direction(dir), active(true){}
 
     static bool checkCollision(int x, int y, const std::vector<MapObject>& staticObjects) {
         for (const auto& obj : staticObjects) {
@@ -157,9 +161,9 @@ public:
             default: return L'?';
         }
     }
-    // Tank own element
+    // constructor
     Tank(int x, int y, Direction dir = Direction::Up, int color = COLOR_BLUE, int hp = 20, const std::string& name = "Player")
-        : GameObject(x, y), direction(dir), color(color), hp(hp), name(name) {}
+        : GameObject(x, y, MapObjectType::tank), direction(dir), color(color), hp(hp), name(name) {}
     static std::vector<Tank> createTanks(int playerNum, const std::string remotePlayerNames[], int gridWidth, int gridHeight) {
         std::vector<Tank> tanks;
         int startX = gridWidth / 2;
@@ -173,6 +177,7 @@ public:
         return tanks;
     }
 
+    // tank own function
     void setDirection(Direction dir) {direction = dir;}
     Direction getDirection() const { return direction; }
 
