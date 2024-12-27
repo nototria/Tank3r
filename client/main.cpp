@@ -1,6 +1,6 @@
 #include <ncurses.h>
-#include "GameObject.h"
-#include "map_generator.cpp"
+#include "../shared/GameObject.h"
+#include "../shared/map_generator.cpp"
 
 void renderTank(WINDOW* win, Tank& tank) {
     int x = tank.getX();
