@@ -2,6 +2,39 @@
 #include "../shared/GameObject.h"
 #include "../shared/map_generator.cpp"
 
+void initGame(int& width, int& height, WINDOW*& titleWin, WINDOW*& inputWin, WINDOW*& gameWin, WINDOW*& endWin, GameState& state) {
+    initscr();
+    noecho();
+    cbreak();
+    start_color();
+    curs_set(0);
+    setlocale(LC_ALL, "");
+
+    // Initialize color pairs
+    init_pair(1, COLOR_RED, COLOR_BLACK);
+    init_pair(2, COLOR_GREEN, COLOR_BLACK);
+    init_pair(3, COLOR_YELLOW, COLOR_BLACK);
+    init_pair(4, COLOR_BLUE, COLOR_BLACK);
+    init_pair(5, COLOR_MAGENTA, COLOR_BLACK);
+    init_pair(6, COLOR_CYAN, COLOR_BLACK);
+    init_pair(7, COLOR_WHITE, COLOR_BLACK);
+
+    width = 100;
+    height = 40;
+
+    int startX = (COLS - width) / 2;
+    int startY = (LINES - height) / 2;
+
+    // Create windows
+    titleWin = newwin(height, width, startY, startX);
+    inputWin = newwin(height, width, startY, startX);
+    gameWin = newwin(height, width, startY, startX);
+    endWin = newwin(height, width, startY, startX);
+
+    // Initialize game state and username
+    state = GameState::TitleScreen;
+}
+
 void renderTank(WINDOW* win, Tank& tank) {
     int x = tank.getX();
     int y = tank.getY();
@@ -197,7 +230,7 @@ void handleUsernameInput(WINDOW* win, std::string& username) {
     noecho();
 }
 
-void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObject>& staticObjects, GameState& state, const std::string& username, int playerNum) {
+void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObject>& staticObjects, GameState& state, const std::string& username, int playerNum, std::string PlayerNames[]) {
     // status windows
     const int statusBlockWidth = 25;
     const int statusBlockHeight = 10; 
@@ -220,12 +253,13 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
     GameTimer timer(0.016); // 60 FPS
     bool loopRunning = true;
 
-    //remote Tank
-    std::string PlayerNames[playerNum];
+    //remote tanks simulation
     PlayerNames[0] = username;
     PlayerNames[1] = "Player2";
     PlayerNames[2] = "Player3";
     PlayerNames[3] = "Player4";
+
+    // create tanks by PlayerNames
     std::vector<Tank> tanks = Tank::createTanks(playerNum, PlayerNames, gridWidth, gridHeight);
     for(int i = 0; i < playerNum; i++){
         tanks[i].setColor(i+1);
@@ -281,6 +315,9 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
                 break;
             }
         }
+        // TBD: Check for collision between bullets and tanks
+        // TBD: Remote tanks movement retrieval
+
         if (timer.shouldUpdate()) {
             werase(gridWin);
             renderStaticObjects(gridWin, staticObjects);
@@ -314,29 +351,13 @@ void drawEndScreen(WINDOW* win) {
 }
 
 int main() {
-    initscr();
-    noecho();
-    cbreak();
-    start_color();
-    curs_set(0);
-    setlocale(LC_ALL, "");
-    init_pair(1, COLOR_RED, COLOR_BLACK);
-    init_pair(2, COLOR_GREEN, COLOR_BLACK);
-    init_pair(3, COLOR_YELLOW, COLOR_BLACK);
-    init_pair(4, COLOR_BLUE, COLOR_BLACK);
-    init_pair(5, COLOR_MAGENTA, COLOR_BLACK);
-    init_pair(6, COLOR_CYAN, COLOR_BLACK);
-    init_pair(7, COLOR_WHITE, COLOR_BLACK);
-
-    int playerNum = 4;
-    int width = 100, height = 40;
-    int startX = (COLS - width) / 2, startY = (LINES - height) / 2;
-    WINDOW* titleWin = newwin(height, width, startY, startX);
-    WINDOW* inputWin = newwin(height, width, startY, startX);
-    WINDOW* gameWin = newwin(height, width, startY, startX);
-    WINDOW* endWin = newwin(height, width, startY, startX);
-    GameState state = GameState::TitleScreen;
-    std::string username = "";
+    // TBD: get other players info from server (playerNum)
+    int playerNum = 4, width, height;
+    std::string PlayerNames[playerNum];
+    WINDOW *titleWin, *inputWin, *gameWin, *endWin;
+    GameState state;
+    std::string username="";
+    initGame(width, height, titleWin, inputWin, gameWin, endWin, state);
 
     bool running = true;
     while (running) {
@@ -354,8 +375,10 @@ int main() {
             }
 
             case GameState::GameLoop: {
+                // TBD: Generate static objects
                 std::vector<MapObject> staticObjects = generateStaticObjects(width, height, 100, 100);
-                gameLoop(gameWin, width, height, staticObjects, state, username, playerNum);
+                // TBD: get other players info from server (PlayerNames)
+                gameLoop(gameWin, width, height, staticObjects, state, username, playerNum, PlayerNames);
                 state = GameState::EndScreen;
                 break;
             }
@@ -370,11 +393,7 @@ int main() {
             }
         }
     }
-
-    delwin(titleWin);
-    delwin(inputWin);
-    delwin(gameWin);
-    delwin(endWin);
+    delwin(titleWin);delwin(inputWin);delwin(gameWin);delwin(endWin);
     endwin();
     return 0;
 }
