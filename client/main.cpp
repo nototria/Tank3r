@@ -60,33 +60,20 @@ void drawTitleScreen(WINDOW* win) {
     }
     wattroff(win, COLOR_PAIR(COLOR_YELLOW));
 
-    // Subtitle flashing logic
+    // Subtitle
     const char* subtitle = "Press 'e' to start";
     int subtitleY = startY + artLines + 10;
     int subtitleX = (maxX - strlen(subtitle)) / 2;
 
-    // Start the timer using chrono
-    auto lastFlashTime = std::chrono::high_resolution_clock::now();
-    bool showSubtitle = true;
-
+    wattron(win, COLOR_PAIR(COLOR_CYAN) | A_BOLD | A_BLINK);
+    mvwprintw(win, subtitleY, subtitleX, "%s", subtitle);
+    wattroff(win, COLOR_PAIR(COLOR_CYAN)| A_BOLD | A_BLINK);
     while (true) {
         int ch = wgetch(win);
         if (ch == 'e' || ch == 'E') {break;}
 
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> elapsed = currentTime - lastFlashTime;
-        if (elapsed.count() >= 0.5) {
-            lastFlashTime = currentTime;
-            showSubtitle = !showSubtitle;
-        }
-        mvwprintw(win, subtitleY, subtitleX, "                     ");
-        if (showSubtitle) {
-            wattron(win, COLOR_PAIR(COLOR_CYAN));
-            mvwprintw(win, subtitleY, subtitleX, "%s", subtitle);
-            wattroff(win, COLOR_PAIR(COLOR_CYAN));
-        }
-        wrefresh(win);
     }
+    wrefresh(win);
 }
 
 void drawUsernameInput(WINDOW* win, const std::string& username) {
