@@ -21,7 +21,7 @@ std::vector<MapObject> generateStaticObjects(int width, int height, int numWalls
             y = std::rand() % (height - 2) + 1; // Avoid border
         } while (isPositionOccupied(x, y));   // Ensure no overlap
 
-        staticObjects.emplace_back(x, y, MapObjectType::Wall);
+        staticObjects.emplace_back(x, y, MapObjectType::wall);
     }
 
     // Generate water tiles
@@ -32,7 +32,7 @@ std::vector<MapObject> generateStaticObjects(int width, int height, int numWalls
             y = std::rand() % (height - 2) + 1;
         } while (isPositionOccupied(x, y));
 
-        staticObjects.emplace_back(x, y, MapObjectType::Water);
+        staticObjects.emplace_back(x, y, MapObjectType::water);
     }
 
     return staticObjects;
