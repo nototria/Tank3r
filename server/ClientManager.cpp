@@ -176,9 +176,7 @@ void ClientManager::process_commands(const int idx){
             tmp0=="start" && is_int(tmp1) &&
             std::stoi(tmp1)==client_obj.room_id &&
             this->room_data_list[client_obj.room_id].host_id==client_obj.id
-        ){
-            
-        }
+        ) this->start_game(client_obj.room_id);
         break;
     default: break;
     }
@@ -210,6 +208,7 @@ inline bool ClientManager::RoomData::is_full() const{
 
 void ClientManager::join_room(const int client_id, int room_id){
     std::cout<<"call join room"<<std::endl;
+    auto &client_obj=client_data_list[client_id];
     if(room_id>=MAX_ROOMS) return;
     //if room_id < 0, then random match
     if(room_id<0){
@@ -228,20 +227,25 @@ void ClientManager::join_room(const int client_id, int room_id){
         //otherwise, no room is available
         if(!wait_rooms.empty()) room_id=wait_rooms[random()%wait_rooms.size()];
         else if(!empty_rooms.empty()) room_id=empty_rooms[random()%empty_rooms.size()];
-        else return;
+        else{
+            write(this->pollfd_list[client_obj.id].fd,"fail\n",5);
+            return;
+        }
     }
 
     //join with room_id
     auto &room_obj=room_data_list[room_id];
-    auto &client_obj=client_data_list[client_id];
-
+    
     //if room is full
-    if(room_obj.is_full()) return;
+    if(room_obj.is_full()){
+        write(this->pollfd_list[client_obj.id].fd,"fail\n",5);
+        return;
+    }
     
     room_obj.client_id_set.insert(client_id);
 
     //send joined room id to client
-    snprintf(send_buffer,1024,"join %s\n",id2str(room_obj.id));
+    snprintf(send_buffer,1024,"join%c%s\n",COMMAND_SEP,id2str(room_obj.id));
     write(this->pollfd_list[client_obj.id].fd,send_buffer,10);
 
     //if this is the first player of the room
@@ -249,7 +253,7 @@ void ClientManager::join_room(const int client_id, int room_id){
         room_obj.state=RoomData::wait;
         room_obj.host_id=client_obj.id;
         //notify the host
-        snprintf(send_buffer,1024,"host %s\n",id2str(room_obj.id));
+        snprintf(send_buffer,1024,"host%c%s\n",COMMAND_SEP,id2str(room_obj.id));
         write(this->pollfd_list[room_obj.host_id].fd,send_buffer,10);
     }
 
@@ -274,7 +278,8 @@ void ClientManager::exit_room(const int client_id, const int room_id){
     //if the room host exit
     else if(room_obj.host_id==client_id){
         room_obj.host_id=*(room_obj.client_id_set.begin());
-        write(this->pollfd_list[room_obj.host_id].fd,"host\n",5);
+        snprintf(send_buffer,1024,"host%c%s\n",COMMAND_SEP,id2str(room_obj.id));
+        write(this->pollfd_list[room_obj.host_id].fd,send_buffer,10);
     }
 
     client_obj.state=ClientData::idle;
@@ -299,7 +304,7 @@ void ClientManager::check_state(){
         if(this->pollfd_list[i].fd<0) continue;
         if(flag) std::cout<<'\n';
         flag=true;
-        std::cout<<"\tclient_id "<<client_data_list[i].id<<'\n';
+        std::cout<<"\tclient_id "<<id2str(client_data_list[i].id)<<'\n';
         std::cout<<"\tuser_id "<<client_data_list[i].user_id<<'\n';
         std::cout<<"\tstate ";
         switch(this->client_data_list[i].state){
@@ -320,7 +325,7 @@ void ClientManager::check_state(){
         if(this->room_data_list[i].state==RoomData::inactive) continue;
         if(flag) std::cout<<'\n';
         flag=true;
-        std::cout<<"\troom_id "<<this->room_data_list[i].id<<'\n';
+        std::cout<<"\troom_id "<<id2str(this->room_data_list[i].id)<<'\n';
         std::cout<<"\tstate ";
         switch(this->room_data_list[i].state){
             case RoomData::inactive: std::cout<<"inactive";break;
