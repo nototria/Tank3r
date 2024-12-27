@@ -56,7 +56,7 @@ public:
     int getY() const { return y; }
     MapObjectType getType() const { return type; }
     bool isBlocking() const {return type == MapObjectType::Wall;}
-
+    bool isObstacle() const {return (type == MapObjectType::Water || type == MapObjectType::Wall);}
     char getSymbol() const {
         switch (type) {
             case MapObjectType::Wall: return '#'; // wall
@@ -165,6 +165,12 @@ public:
     Direction getDirection() const { return direction; }
     void setColor(const int& newColor) {color = newColor;}
     int getColor() {return color;}
+    static bool checkTankCollision(int nextX, int nextY, const std::vector<MapObject>& staticObjects) {
+        for (const auto& obj : staticObjects) {
+            if (obj.isObstacle() && obj.getX() == nextX && obj.getY() == nextY) {return true;}
+        }
+        return false;
+    }
 
     // bullet control
     void fireBullet() { bullets.emplace_back(x, y, direction); }
