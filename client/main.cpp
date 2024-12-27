@@ -24,21 +24,18 @@ void renderStaticObjects(WINDOW* win, const std::vector<MapObject>& objects) {
 }
 
 void renderPlayerInfo(WINDOW* win, const std::string& playerName, int playerHP, int color) {
-    werase(win);  // Clear the window
-
-    // Display player name
+    werase(win);
+    // name
     mvwprintw(win, 2, 2, "Name: %s", playerName.c_str());
-
-    // Display HP value
+    // HP value
     mvwprintw(win, 5, 2, "HP: %d", playerHP);
-
-    // Display HP bar using wide characters
+    // HP bar
     wattron(win, COLOR_PAIR(color));
-    box(win, 0, 0);  // Draw the border
-    std::wstring hpBar(playerHP, L'█');  // Each █ represents 2 HP
-    mvwaddwstr(win, 7, 3, hpBar.c_str());    // Add wide string to window
+    box(win, 0, 0);
+    std::wstring hpBar(playerHP, L'█');
+    mvwaddwstr(win, 7, 3, hpBar.c_str());
     wattroff(win, COLOR_PAIR(color));
-    wrefresh(win);  // Refresh the window to display the content
+    wrefresh(win);
 }
 
 void drawTitleScreen(WINDOW* win) {
