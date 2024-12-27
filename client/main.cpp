@@ -2,7 +2,7 @@
 #include "../shared/GameObject.h"
 #include "../shared/map_generator.cpp"
 
-void initGame(int& width, int& height, WINDOW*& titleWin, WINDOW*& inputWin, WINDOW*& gameWin, WINDOW*& endWin, GameState& state) {
+void initGame(int& width, int& height, WINDOW*& titleWin, WINDOW*& inputWin, WINDOW*& roomWin, WINDOW*& gameWin, WINDOW*& endWin, GameState& state) {
     initscr();
     noecho();
     cbreak();
@@ -28,6 +28,7 @@ void initGame(int& width, int& height, WINDOW*& titleWin, WINDOW*& inputWin, WIN
     // Create windows
     titleWin = newwin(height, width, startY, startX);
     inputWin = newwin(height, width, startY, startX);
+    roomWin = newwin(height, width, startY, startX);
     gameWin = newwin(height, width, startY, startX);
     endWin = newwin(height, width, startY, startX);
 
@@ -230,10 +231,87 @@ void handleUsernameInput(WINDOW* win, std::string& username) {
     noecho();
 }
 
+void drawRoomMenu(WINDOW* win) {
+    werase(win);  // Clear window
+    box(win, 0, 0);  // Draw box around the window
+    mvwprintw(win, 1, 1, "Room Menu");
+    mvwprintw(win, 3, 1, "1. Join a room by typing Room ID");
+    mvwprintw(win, 4, 1, "2. Quick Join (Auto Join a Random Room)");
+
+    wrefresh(win);
+}
+
+void joinRoomById(WINDOW* win, std::string& roomId) {
+    // Prompt user to enter a room ID
+    mvwprintw(win, 6, 1, "Enter Room ID: ");
+    wrefresh(win);
+
+    echo();  // Enable input echo
+    curs_set(1);  // Show cursor
+
+    // Input room ID
+    char input[20];
+    mvwgetstr(win, 6, 16, input);  // Get input from user
+    roomId = std::string(input);   // Store the entered room ID
+
+    noecho();  // Disable input echo
+    curs_set(0);  // Hide cursor
+
+    // In real application, use the room ID to connect to the server
+    mvwprintw(win, 8, 1, "Joining Room %s...", roomId.c_str());
+    wrefresh(win);
+    // Simulate joining the room with a short delay (for demonstration)
+    napms(1000);
+}
+
+void quickJoin(WINDOW* win) {
+    // Simulate joining a random room
+    mvwprintw(win, 8, 1, "Quick Joining to a Random Room...");
+    wrefresh(win);
+    // In a real application, generate a random room ID or select a predefined one
+    // Simulate delay before quick join
+    napms(1000);
+}
+
+void roomMenu(WINDOW* win, GameState& state) {
+    std::string roomId;
+    int choice = 0;
+
+    while (true) {
+        drawRoomMenu(win);  // Draw the room menu again
+
+        // Wait for user input
+        choice = wgetch(win);
+
+        switch (choice) {
+            case '1':  // Join a room by ID
+                joinRoomById(win, roomId);
+                state = GameState::GameLoop;  // Transition to GameLoop after joining
+                return;  // Exit the room menu
+                break;
+
+            case '2':  // Quick Join
+                quickJoin(win);
+                state = GameState::GameLoop;  // Transition to GameLoop after quick join
+                return;  // Exit the room menu
+                break;
+
+            case 'q':  // Exit the menu (if needed)
+                mvwprintw(win, 10, 1, "Exiting the menu...");
+                wrefresh(win);
+                napms(1000);
+                state = GameState::EndScreen;  // Transition to EndScreen or any other state
+                return;  // Exit the menu
+                break;
+
+            default:
+                break;
+        }
+    }
+}
+
 void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObject>& staticObjects, GameState& state, const std::string& username, int playerNum, std::string PlayerNames[]) {
     // status windows
-    const int statusBlockWidth = 25;
-    const int statusBlockHeight = 10; 
     int startX = (COLS - gridWidth) / 2, startY = (LINES - gridHeight) / 2;
     WINDOW* StatusWin[playerNum];
     StatusWin[0] = newwin(statusBlockHeight, statusBlockWidth, startY, startX - statusBlockWidth);
@@ -354,10 +432,10 @@ int main() {
     // TBD: get other players info from server (playerNum)
     int playerNum = 4, width, height;
     std::string PlayerNames[playerNum];
-    WINDOW *titleWin, *inputWin, *gameWin, *endWin;
+    WINDOW *titleWin, *inputWin, *roomWin,*gameWin, *endWin;
     GameState state;
     std::string username="";
-    initGame(width, height, titleWin, inputWin, gameWin, endWin, state);
+    initGame(width, height, titleWin, inputWin, roomWin, gameWin, endWin, state);
 
     bool running = true;
     while (running) {
@@ -370,7 +448,13 @@ int main() {
 
             case GameState::UsernameInput: {
                 handleUsernameInput(inputWin, username);
-                state = GameState::GameLoop;
+                state = GameState::RoomMenu;
+                break;
+            }
+
+            case GameState::RoomMenu: {
+                // TBD: Implement room menu
+                roomMenu(roomWin, state);
                 break;
             }
 
@@ -393,7 +477,7 @@ int main() {
             }
         }
     }
-    delwin(titleWin);delwin(inputWin);delwin(gameWin);delwin(endWin);
+    delwin(titleWin);delwin(inputWin);delwin(roomWin);delwin(gameWin);delwin(endWin);
     endwin();
     return 0;
 }
