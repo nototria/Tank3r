@@ -95,31 +95,91 @@ void drawTitleScreen(WINDOW* win) {
 }
 
 void drawUsernameInput(WINDOW* win, const std::string& username) {
+    int maxY, maxX;
+    getmaxyx(win, maxY, maxX);
+    const wchar_t* tank3rArt[] = {
+        L"  _____   __   __     ___     ___     _  _      ___               _  _      ___    __  __     ___   ",
+        L" |_   _|  \\ \\ / /    | _ \\   |_ _|   | \\| |    / __|      o O O  | \\| |    /   \\  |  \\/  |   | __|  ",
+        L"   | |     \\ V /     |  _/    | |    | .` |   | (_ |     o       | .` |    | - |  | |\\/| |   | _|   ",
+        L"  _|_|_    _|_|_    _|_|_    |___|   |_|\\_|    \\___|    TS__[O]  |_|\\_|    |_|_|  |_|__|_|   |___|  ",
+        L"_|\"\"\"\"\"| _| \"\"\" | _| \"\"\" | _|\"\"\"\"\"| _|\"\"\"\"\"| _|\"\"\"\"\"|  {======| _|\"\"\"\"\"| _|\"\"\"\"\"| _|\"\"\"\"\"| _|\"\"\"\"\"| ",
+        L"\"`-0-0-' \"`-0-0-' \"`-0-0-' \"`-0-0-' \"`-0-0-' \"`-0-0-' ./o--000' \"`-0-0-' \"`-0-0-' \"`-0-0-' \"`-0-0-' "};
+    int artWidth = wcslen(tank3rArt[0]);
+    int startX = (maxX - artWidth) / 2;
+    int artLines = sizeof(tank3rArt) / sizeof(tank3rArt[0]);
+    int startY = (maxY - artLines) / 5;
+
+
+    // Display
     werase(win);
-    box(win, 0, 0);
-    mvwprintw(win, 5, 30, "Enter your username:");
-    mvwprintw(win, 7, 30, "Username:");
-    mvwprintw(win, 7, 40, "%s", username.c_str());
+    // logo
+    wattron(win, COLOR_PAIR(COLOR_YELLOW));
+        for (int i = 0; i < artLines; i++) {
+            mvwaddwstr(win, startY + i, startX, tank3rArt[i]);
+        }
+    wattroff(win, COLOR_PAIR(COLOR_YELLOW));
+
+    // instructions
+    const char* subtitle = "Please enter your username and press Enter:";
+    int subtitleX = (maxX - strlen(subtitle))/2;
+    int subtitleY = startY + artLines + 3;
+    wattron(win, A_BOLD);
+        mvwprintw(win,  subtitleY, subtitleX, "%s", subtitle);
+    wattroff(win, A_BOLD);
+
+    // Label and input field
+    int inputX = (maxX - username.length() % 2 == 0) ? (maxX - username.length())/2 : (maxX - username.length())/2 - 1;
+    int inputY = startY + artLines + 10;
+    wattron(win, A_UNDERLINE | A_BOLD);
+        mvwprintw(win, inputY, inputX, "%s", username.c_str());
+    wattroff(win, A_UNDERLINE | A_BOLD);
+
+    // decorative footer
+    int footerX = (maxX - 40)/2;
+    int footerY = startY + artLines + 20;
+    mvwprintw(win, footerY, footerX,   "***************************************");
+    mvwprintw(win, footerY+1, footerX, "*       Welcome to Tank3r Game        *");
+    mvwprintw(win, footerY+2, footerX, "***************************************");
     wrefresh(win);
 }
 
-void handleUsernameInput(WINDOW* win, std::string& username) {
-    drawUsernameInput(win, username); // Draw initial UI
-    curs_set(1);                      // Enable cursor
-    echo();                           // Enable input echo
-    keypad(win, TRUE);                // Enable special key handling
+void drawCustomBorder(WINDOW* win) {
+    std::setlocale(LC_ALL, "");
+    cchar_t vertical, horizontal, topLeft, topRight, bottomLeft, bottomRight;
+    wchar_t verticalChar[] = {L'║', 0};
+    wchar_t horizontalChar[] = {L'═', 0};
+    wchar_t topLeftChar[] = {L'╔', 0};
+    wchar_t topRightChar[] = {L'╗', 0};
+    wchar_t bottomLeftChar[] = {L'╚', 0};
+    wchar_t bottomRightChar[] = {L'╝', 0};
+    setcchar(&vertical, verticalChar, 0, 0, nullptr);
+    setcchar(&horizontal, horizontalChar, 0, 0, nullptr);
+    setcchar(&topLeft, topLeftChar, 0, 0, nullptr);
+    setcchar(&topRight, topRightChar, 0, 0, nullptr);
+    setcchar(&bottomLeft, bottomLeftChar, 0, 0, nullptr);
+    setcchar(&bottomRight, bottomRightChar, 0, 0, nullptr);
+    wborder_set(win, &vertical, &vertical, &horizontal, &horizontal,&topLeft, &topRight, &bottomLeft, &bottomRight);
+}
 
-    int ch, cursor_position = username.length() + 1; // Set initial cursor position
+void handleUsernameInput(WINDOW* win, std::string& username) {
+    int maxY, maxX;
+    getmaxyx(win, maxY, maxX);
+    drawUsernameInput(win, username);
+    int ch, cursor_position = 1;
+    curs_set(1);
+    echo();
+    keypad(win, TRUE);
     while (true) {
-        ch = wgetch(win);            // Get input from the user
-        if (ch == '\n') {            // Enter key to finalize input
+        int inputX = (maxX - username.length())/2;
+        ch = wgetch(win);
+        if (ch == '\n') {
             break;
-        } else if (ch == KEY_BACKSPACE || ch == 127) { // Backspace handling
+        } else if (ch == KEY_BACKSPACE || ch == 127) {
             if (!username.empty() && cursor_position > 1) {
-                username.erase(cursor_position - 2, 1); // Remove character before cursor
-                cursor_position--;                      // Move cursor back
+                username.erase(cursor_position - 2, 1);
+                cursor_position--;
             }
-        } else if (ch == KEY_LEFT || ch == KEY_RIGHT) { // Cursor navigation
+        } else if (ch == KEY_LEFT || ch == KEY_RIGHT) {
             switch (ch) {
                 case KEY_LEFT:
                     if (cursor_position > 1) cursor_position--;
@@ -128,19 +188,16 @@ void handleUsernameInput(WINDOW* win, std::string& username) {
                     if (cursor_position <= (int)username.length()) cursor_position++;
                     break;
             }
-        } else if (ch >= 32 && ch <= 126 && username.length() < 20) { // Character insertion
-            username.insert(cursor_position - 1, 1, ch); // Insert character at cursor
-            cursor_position++;                           // Move cursor forward
+        } else if (ch >= 32 && ch <= 126 && username.length() < 20) {
+            username.insert(cursor_position - 1, 1, ch);
+            cursor_position++;
         }
-
-        // Redraw the input UI
         drawUsernameInput(win, username);
-        wmove(win, 7, 39 + cursor_position); // Set cursor position in the input field
-        wrefresh(win);                       // Refresh the window
+        wmove(win, 22, (maxX - username.length() % 2 == 0) ? (maxX - username.length())/2 : (maxX - username.length())/2 - 1 + cursor_position - 1);
+        wrefresh(win);
     }
-
-    curs_set(0); // Disable cursor after input
-    noecho();    // Disable input echo
+    curs_set(0);
+    noecho();
 }
 
 void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObject>& staticObjects, GameState& state, const std::string& username, int playerNum) {
@@ -162,7 +219,7 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
     // default values set
     keypad(gridWin, TRUE);
     nodelay(gridWin, TRUE);
-    box(gridWin,0,0);
+    drawCustomBorder(gridWin);
     GameTimer timer(0.016); // 60 FPS
     bool loopRunning = true;
 
@@ -230,7 +287,8 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
         if (timer.shouldUpdate()) {
             werase(gridWin);
             renderStaticObjects(gridWin, staticObjects);
-            box(gridWin,0,0);
+            setlocale(LC_ALL, "");
+            drawCustomBorder(gridWin);
 
             for(int i = 0; i < playerNum; i++){
                 tanks[i].updateBullets(gridWidth, gridHeight, staticObjects);
