@@ -9,6 +9,9 @@
 #define RED 1069
 #define GREEN 2069
 #define BLUE 3069
+#define SCREEN_WIDTH 100
+#define SCREEN_HEIGHT 40
+
 enum class Direction {Right, Left, Up, Down};
 enum class GameState {TitleScreen, UsernameInput, GameLoop, EndScreen};
 enum class MapObjectType {Wall,Water};
@@ -17,8 +20,8 @@ enum class MapObjectType {Wall,Water};
 class GameTimer {
 private:
     std::chrono::steady_clock::time_point lastTime;
-    double accumulator; // Accumulated time for fixed updates
-    const double tickRate; // Fixed update rate (in seconds)
+    double accumulator;
+    const double tickRate;
 
 public:
     GameTimer(double tickRateInSeconds)
@@ -26,18 +29,16 @@ public:
         lastTime = std::chrono::steady_clock::now();
     }
 
-    // Calculate elapsed time and update the accumulator
     bool shouldUpdate() {
         auto currentTime = std::chrono::steady_clock::now();
         double elapsedTime = std::chrono::duration<double>(currentTime - lastTime).count();
         lastTime = currentTime;
-
         accumulator += elapsedTime;
         if (accumulator >= tickRate) {
             accumulator -= tickRate;
-            return true; // Perform an update
+            return true;
         }
-        return false; // Not enough time has passed for an update
+        return false;
     }
 };
 
@@ -58,8 +59,8 @@ public:
 
     char getSymbol() const {
         switch (type) {
-            case MapObjectType::Wall: return '#'; // Wall symbol
-            case MapObjectType::Water: return '~'; // Water symbol
+            case MapObjectType::Wall: return '#'; // wall
+            case MapObjectType::Water: return '~'; // water
             default: return ' ';
         }
     }
@@ -115,7 +116,6 @@ public:
         int nextX = x;
         int nextY = y;
 
-        // Determine next position
         switch (direction) {
             case Direction::Up:    nextY -= 1; break;
             case Direction::Down:  nextY += 1; break;
@@ -129,7 +129,6 @@ public:
             checkCollision(nextX, nextY, staticObjects)) {
             active = false;
         } else {
-            // Update position
             x = nextX;
             y = nextY;
         }
@@ -138,12 +137,8 @@ public:
     bool isOutOfBounds(int width, int height) const {
         return x <= 0 || x >= width - 1 || y <= 0 || y >= height - 1;
     }
-
     bool isActive() const { return active; }
-    
-    wchar_t getSymbol() const {
-        return L'*'; // Symbol for the bullet
-    }
+    wchar_t getSymbol() const {return L'*';}
 };
 
 // Tank
