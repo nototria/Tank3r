@@ -3,12 +3,12 @@
 
 #include <iostream>
 #include <string>
+#include <cstring>
 #include <vector>
 #include <chrono>
+#include <unistd.h>
+#include <ncurses.h>
 
-#define RED 1069
-#define GREEN 2069
-#define BLUE 3069
 #define SCREEN_WIDTH 100
 #define SCREEN_HEIGHT 40
 
