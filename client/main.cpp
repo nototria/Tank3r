@@ -231,16 +231,6 @@ void handleUsernameInput(WINDOW* win, std::string& username) {
     noecho();
 }
 
-void drawRoomMenu(WINDOW* win) {
-    werase(win);  // Clear window
-    box(win, 0, 0);  // Draw box around the window
-    mvwprintw(win, 1, 1, "Room Menu");
-    mvwprintw(win, 3, 1, "1. Join a room by typing Room ID");
-    mvwprintw(win, 4, 1, "2. Quick Join (Auto Join a Random Room)");
-
-    wrefresh(win);
-}
-
 void joinRoomById(WINDOW* win, std::string& roomId) {
     // Prompt user to enter a room ID
     mvwprintw(win, 6, 1, "Enter Room ID: ");
@@ -266,46 +256,104 @@ void joinRoomById(WINDOW* win, std::string& roomId) {
 
 void quickJoin(WINDOW* win) {
     // Simulate joining a random room
-    mvwprintw(win, 8, 1, "Quick Joining to a Random Room...");
+    mvwprintw(win, 20, 10, "Quick Joining to a Random Room...");
     wrefresh(win);
     // In a real application, generate a random room ID or select a predefined one
     // Simulate delay before quick join
     napms(1000);
 }
 
-void roomMenu(WINDOW* win, GameState& state) {
+void RoomMenu(WINDOW* win, GameState& state) {
     std::string roomId;
-    int choice = 0;
+    setlocale(LC_ALL, "");
+    keypad(win, TRUE);
+    nodelay(win, FALSE); // blocking mode
 
+    int maxY, maxX;
+    getmaxyx(win, maxY, maxX);
+    const wchar_t* menuArt[] = {
+        L"██████╗  ██████╗  ██████╗ ███╗   ███╗",
+        L"██╔══██╗██╔═══██╗██╔═══██╗████╗ ████║",
+        L"██████╔╝██║   ██║██║   ██║██╔████╔██║",
+        L"██╔══██╗██║   ██║██║   ██║██║╚██╔╝██║",
+        L"██║  ██║╚██████╔╝╚██████╔╝██║ ╚═╝ ██║",
+        L"╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝     ╚═╝",};
+    int artWidth = wcslen(menuArt[0]);
+    int startX = (maxX - artWidth) / 2;
+    int artLines = sizeof(menuArt) / sizeof(menuArt[0]);
+    int startY = 6;
+
+    // Display ASCII art
+    werase(win);
+    wattron(win, COLOR_PAIR(1));
+    for (int i = 0; i < artLines; i++) {
+        mvwaddwstr(win, startY + i, startX, menuArt[i]);
+    }
+    wattroff(win, COLOR_PAIR(1));
+
+    // Welcome message
+    const char* welcome_msg = "Welcome to the Room Menu!";
+    int welcome_msgY = startY + artLines + 2;
+    int welcome_msgX = (maxX - strlen(welcome_msg)) / 2;
+    wattron(win, COLOR_PAIR(2) | A_BOLD);
+    mvwprintw(win, welcome_msgY, welcome_msgX, "%s", welcome_msg);
+    wattroff(win, COLOR_PAIR(2) | A_BOLD);
+
+    // Option hints
+    const char* options[] = {
+        "1. Join a room by typing Room ID",
+        "2. Quick Join (Auto Join a Random Room)",
+        "3. Back to Main Menu"
+    };
+
+    int numOptions = sizeof(options) / sizeof(options[0]);
+    int optionStartY = welcome_msgY + 3;
+    int optionStartX = (maxX - 40) / 2;
+    int selectedOption = 0;
     while (true) {
-        drawRoomMenu(win);  // Draw the room menu again
+        for (int i = 0; i < numOptions; ++i) {
+            if (i == selectedOption) {
+                wattron(win, COLOR_PAIR(3) | A_REVERSE);
+            } else {
+                wattron(win, COLOR_PAIR(3));
+            }
+            mvwprintw(win, optionStartY + i, optionStartX, "%s", options[i]);
+            wattroff(win, COLOR_PAIR(3) | A_REVERSE);
+        }
+        wrefresh(win);
 
-        // Wait for user input
-        choice = wgetch(win);
-
-        switch (choice) {
-            case '1':  // Join a room by ID
-                joinRoomById(win, roomId);
-                state = GameState::GameLoop;  // Transition to GameLoop after joining
-                return;  // Exit the room menu
+        // Handle input
+        int ch = wgetch(win);
+        switch (ch) {
+            case KEY_UP:
+                selectedOption = (selectedOption - 1 + numOptions) % numOptions;
                 break;
-
-            case '2':  // Quick Join
-                quickJoin(win);
-                state = GameState::GameLoop;  // Transition to GameLoop after quick join
-                return;  // Exit the room menu
+            case KEY_DOWN:
+                selectedOption = (selectedOption + 1) % numOptions;
                 break;
+            case '\n':  // Enter key
+                werase(win);
+                switch (selectedOption+1) {
+                    case 1:  // Join a room by ID
+                        joinRoomById(win, roomId);
+                        state = GameState::GameLoop;
+                        return;
+                        break;
 
-            case 'q':  // Exit the menu (if needed)
-                mvwprintw(win, 10, 1, "Exiting the menu...");
+                    case 2:  // Quick Join
+                        quickJoin(win);
+                        state = GameState::GameLoop;
+                        return;
+                        break;
+
+                    case 3: // back to typing username
+                        state = GameState::UsernameInput;
+                        return;
+                        break;
+                }
                 wrefresh(win);
-                napms(1000);
-                state = GameState::EndScreen;  // Transition to EndScreen or any other state
-                return;  // Exit the menu
-                break;
-
-            default:
-                break;
+                napms(1000);  // Pause for a moment before exiting
+                return;
         }
     }
 }
@@ -453,8 +501,7 @@ int main() {
             }
 
             case GameState::RoomMenu: {
-                // TBD: Implement room menu
-                roomMenu(roomWin, state);
+                RoomMenu(roomWin, state);
                 break;
             }
 
