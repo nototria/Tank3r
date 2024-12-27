@@ -301,9 +301,9 @@ void RoomMenu(WINDOW* win, GameState& state) {
 
     // Option hints
     const char* options[] = {
-        "1. Join a room by typing Room ID",
-        "2. Quick Join (Auto Join a Random Room)",
-        "3. Back to Main Menu"
+        "Join or create a room by typing Room ID",
+        "Quick Join (Auto Join a Random Room)",
+        "Re-type username",
     };
 
     int numOptions = sizeof(options) / sizeof(options[0]);
@@ -469,12 +469,57 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
 }
 
 void drawEndScreen(WINDOW* win) {
+    setlocale(LC_ALL, "");
+    int maxY, maxX;
+    getmaxyx(win, maxY, maxX);
+
+    const wchar_t* winArt[] = {
+        L"██╗   ██╗ ██████╗ ██╗███╗   ██╗",
+        L"██║   ██║██╔═══██╗██║████╗  ██║",
+        L"██║   ██║██║   ██║██║██╔██╗ ██║",
+        L"╚██╗ ██╔╝██║   ██║██║██║╚██╗██║",
+        L" ╚████╔╝ ╚██████╔╝██║██║ ╚████║",
+        L"  ╚═══╝   ╚═════╝ ╚═╝╚═╝  ╚═══╝"
+    };
+
+    int artWidth = wcslen(winArt[0]);
+    int artLines = sizeof(winArt) / sizeof(winArt[0]);
+    int artStartX = (maxX - artWidth) / 2;
+    int artStartY = (maxY - artLines) / 3;
+
+    // Clear the window and draw border
     werase(win);
+    wattron(win, COLOR_PAIR(1));
     box(win, 0, 0);
-    mvwprintw(win, 5, 10, "You WIN");
-    mvwprintw(win, 7, 10, "Press 'r' to restart");
+    wattroff(win, COLOR_PAIR(1));
+
+    // Render ASCII art
+    wattron(win, COLOR_PAIR(2));
+    for (int i = 0; i < artLines; i++) {
+        mvwaddwstr(win, artStartY + i, artStartX, winArt[i]);
+    }
+    wattroff(win, COLOR_PAIR(2));
+
+    // Victory message
+    const char* victoryMsg = "Congratulations! You WIN!";
+    int victoryMsgX = (maxX - strlen(victoryMsg)) / 2;
+    int victoryMsgY = artStartY + artLines + 2;
+    wattron(win, COLOR_PAIR(3) | A_BOLD);
+    mvwprintw(win, victoryMsgY, victoryMsgX, "%s", victoryMsg);
+    wattroff(win, COLOR_PAIR(3) | A_BOLD);
+
+    // Restart prompt
+    const char* restartPrompt = "Press 'r' to restart or 'q' to quit.";
+    int restartPromptX = (maxX - strlen(restartPrompt)) / 2;
+    int restartPromptY = victoryMsgY + 2;
+    wattron(win, COLOR_PAIR(4) | A_BOLD);
+    mvwprintw(win, restartPromptY, restartPromptX, "%s", restartPrompt);
+    wattroff(win, COLOR_PAIR(4) | A_BOLD);
+
+    // Refresh window
     wrefresh(win);
 }
+
 
 int main() {
     // TBD: get other players info from server (playerNum)
@@ -519,6 +564,8 @@ int main() {
                 int ch = wgetch(endWin);
                 if (ch == 'r' || ch == 'R') {
                     state = GameState::UsernameInput;
+                }else if (ch == 'q' || ch == 'Q') {
+                    running = false;
                 }
                 break;
             }
