@@ -26,7 +26,7 @@ class ClientManager{
     char recv_buffer[1024], send_buffer[1024];
     int client_count;
     ClientData client_data_list[MAX_CLIENTS];
-    RoomData room_data_list[MAX_CLIENTS];
+    RoomData room_data_list[MAX_ROOMS];
 public:
     struct pollfd pollfd_list[1+MAX_CLIENTS];
     ClientManager(const int&);
