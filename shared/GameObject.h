@@ -169,8 +169,8 @@ public:
         int startY = gridHeight / 2;
 
         for (int i = 0; i < playerNum; ++i) {
-            // Create each tank with a name and set positions
-            tanks.emplace_back(startX + (i * 2), startY + (i * 2), Direction::Right, COLOR_BLUE, remotePlayerNames[i]);
+            // Use player name from remotePlayerNames and create a tank for each player
+            tanks.emplace_back(startX + (i * 2), startY + (i * 2), Direction::Right, COLOR_BLUE, 20, remotePlayerNames[i]);
         }
 
         return tanks;
