@@ -23,13 +23,21 @@ void renderStaticObjects(WINDOW* win, const std::vector<MapObject>& objects) {
     }
 }
 
-void renderPlayerInfo(WINDOW* win, const std::string& playerName, int playerHP) {
+void renderPlayerInfo(WINDOW* win, const std::string& playerName, int playerHP, int color) {
     werase(win);  // Clear the window
+
+    // Display player name
+    mvwprintw(win, 2, 2, "Name: %s", playerName.c_str());
+
+    // Display HP value
+    mvwprintw(win, 5, 2, "HP: %d", playerHP);
+
+    // Display HP bar using wide characters
+    wattron(win, COLOR_PAIR(color));
     box(win, 0, 0);  // Draw the border
-
-    mvwprintw(win, 1, 1, "Name: %s", playerName.c_str());
-    mvwprintw(win, 2, 1, "HP: %d", playerHP);
-
+    std::wstring hpBar(playerHP, L'█');  // Each █ represents 2 HP
+    mvwaddwstr(win, 7, 3, hpBar.c_str());    // Add wide string to window
+    wattroff(win, COLOR_PAIR(color));
     wrefresh(win);  // Refresh the window to display the content
 }
 
@@ -41,11 +49,21 @@ void drawTitleScreen(WINDOW* win) {
     int maxY, maxX;
     getmaxyx(win, maxY, maxX);
     const wchar_t* tank3rArt[] = {
-        L"████████  █████  ███    ██ ██   ██ ██████  ██████  ",
-        L"   ██    ██   ██ ████   ██ ██  ██       ██ ██   ██ ",
-        L"   ██    ███████ ██ ██  ██ █████    █████  ██████  ",
-        L"   ██    ██   ██ ██  ██ ██ ██  ██       ██ ██   ██ ",
-        L"   ██    ██   ██ ██   ████ ██   ██ ██████  ██   ██ ",};
+        L"████████╗ █████╗ ███╗   ██╗██╗  ██╗██████╗ ██████╗ ",
+        L"╚══██╔══╝██╔══██╗████╗  ██║██║ ██╔╝╚════██╗██╔══██╗",
+        L"   ██║   ███████║██╔██╗ ██║█████╔╝  █████╔╝██████╔╝",
+        L"   ██║   ██╔══██║██║╚██╗██║██╔═██╗  ╚═══██╗██╔══██╗",
+        L"   ██║   ██║  ██║██║ ╚████║██║  ██╗██████╔╝██║  ██║",
+        L"   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚═════╝ ╚═╝  ╚═╝",};
+    // const wchar_t* tank3rArt[] = {
+    //     L"░▒▓████████▓▒░  ░▒▓██████▓▒░  ░▒▓███████▓▒░  ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓███████▓▒░  ░▒▓███████▓▒░  ",
+    //     L"   ░▒▓█▓▒░     ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░        ░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ",
+    //     L"   ░▒▓█▓▒░     ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░        ░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ",
+    //     L"   ░▒▓█▓▒░     ░▒▓████████▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓███████▓▒░  ░▒▓███████▓▒░  ░▒▓███████▓▒░  ",
+    //     L"   ░▒▓█▓▒░     ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░        ░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ",
+    //     L"   ░▒▓█▓▒░     ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░        ░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ",
+    //     L"   ░▒▓█▓▒░     ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓███████▓▒░  ░▒▓█▓▒░░▒▓█▓▒░ "};
+    
     int artWidth = wcslen(tank3rArt[0]);
     int startX = (maxX - artWidth) / 2;
     int artLines = sizeof(tank3rArt) / sizeof(tank3rArt[0]);
@@ -53,7 +71,7 @@ void drawTitleScreen(WINDOW* win) {
 
     // Display
     werase(win);
-    box(win, 0, 0);
+    // box(win, 0, 0);
     wattron(win, COLOR_PAIR(COLOR_YELLOW));
     for (int i = 0; i < artLines; i++) {
         mvwaddwstr(win, startY + i, startX, tank3rArt[i]);
@@ -62,7 +80,7 @@ void drawTitleScreen(WINDOW* win) {
 
     // Subtitle
     const char* subtitle = "Press 'e' to start";
-    int subtitleY = startY + artLines + 10;
+    int subtitleY = startY + artLines + 5;
     int subtitleX = (maxX - strlen(subtitle)) / 2;
 
     wattron(win, COLOR_PAIR(COLOR_CYAN) | A_BOLD | A_BLINK);
@@ -79,10 +97,50 @@ void drawTitleScreen(WINDOW* win) {
 void drawUsernameInput(WINDOW* win, const std::string& username) {
     werase(win);
     box(win, 0, 0);
+    mvwprintw(win, 5, 30, "Enter your username:");
     mvwprintw(win, 7, 30, "Username:");
-    mvwprintw(win, 5, 30, "Enter your username");
     mvwprintw(win, 7, 40, "%s", username.c_str());
     wrefresh(win);
+}
+
+void handleUsernameInput(WINDOW* win, std::string& username) {
+    drawUsernameInput(win, username); // Draw initial UI
+    curs_set(1);                      // Enable cursor
+    echo();                           // Enable input echo
+    keypad(win, TRUE);                // Enable special key handling
+
+    int ch, cursor_position = username.length() + 1; // Set initial cursor position
+    while (true) {
+        ch = wgetch(win);            // Get input from the user
+        if (ch == '\n') {            // Enter key to finalize input
+            break;
+        } else if (ch == KEY_BACKSPACE || ch == 127) { // Backspace handling
+            if (!username.empty() && cursor_position > 1) {
+                username.erase(cursor_position - 2, 1); // Remove character before cursor
+                cursor_position--;                      // Move cursor back
+            }
+        } else if (ch == KEY_LEFT || ch == KEY_RIGHT) { // Cursor navigation
+            switch (ch) {
+                case KEY_LEFT:
+                    if (cursor_position > 1) cursor_position--;
+                    break;
+                case KEY_RIGHT:
+                    if (cursor_position <= (int)username.length()) cursor_position++;
+                    break;
+            }
+        } else if (ch >= 32 && ch <= 126 && username.length() < 20) { // Character insertion
+            username.insert(cursor_position - 1, 1, ch); // Insert character at cursor
+            cursor_position++;                           // Move cursor forward
+        }
+
+        // Redraw the input UI
+        drawUsernameInput(win, username);
+        wmove(win, 7, 39 + cursor_position); // Set cursor position in the input field
+        wrefresh(win);                       // Refresh the window
+    }
+
+    curs_set(0); // Disable cursor after input
+    noecho();    // Disable input echo
 }
 
 void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObject>& staticObjects, GameState& state, const std::string& username, int playerNum) {
@@ -112,9 +170,11 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
     std::string PlayerNames[playerNum];
     PlayerNames[0] = username;
     PlayerNames[1] = "Player2";
+    PlayerNames[2] = "Player3";
+    PlayerNames[3] = "Player4";
     std::vector<Tank> tanks = Tank::createTanks(playerNum, PlayerNames, gridWidth, gridHeight);
-    for(int i = 1; i < playerNum+1; i++){
-        tanks[i].setColor(i);
+    for(int i = 0; i < playerNum; i++){
+        tanks[i].setColor(i+1);
     }
     Tank &myTank = tanks[0];
     for(int i = 0; i < playerNum; i++){
@@ -136,7 +196,7 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
             case KEY_DOWN: {
                 myTank.setDirection(Direction::Down);
                 int nextY = myTank.getY() + 1;
-                if (nextY < gridHeight && !myTank.checkTankCollision(myTank.getX(), nextY, staticObjects)) {
+                if (nextY < gridHeight -1 && !myTank.checkTankCollision(myTank.getX(), nextY, staticObjects)) {
                     myTank.setY(nextY);
                 }
                 break;
@@ -152,7 +212,7 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
             case KEY_RIGHT: {
                 myTank.setDirection(Direction::Right);
                 int nextX = myTank.getX() + 1;
-                if (nextX < gridWidth && !myTank.checkTankCollision(nextX, myTank.getY(), staticObjects)) {
+                if (nextX < gridWidth -1 && !myTank.checkTankCollision(nextX, myTank.getY(), staticObjects)) {
                     myTank.setX(nextX);
                 }
                 break;
@@ -162,12 +222,11 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
                 break;
             }
             case 'q': {
-                loopRunning = false;
                 state = GameState::EndScreen;
+                loopRunning = false;
                 break;
             }
         }
-
         if (timer.shouldUpdate()) {
             werase(gridWin);
             renderStaticObjects(gridWin, staticObjects);
@@ -176,7 +235,7 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
             for(int i = 0; i < playerNum; i++){
                 tanks[i].updateBullets(gridWidth, gridHeight, staticObjects);
                 renderTank(gridWin, tanks[i]);
-                renderPlayerInfo(StatusWin[i], tanks[i].getName(), tanks[i].getHP());
+                renderPlayerInfo(StatusWin[i], tanks[i].getName(), tanks[i].getHP(), tanks[i].getColor());
                 wrefresh(StatusWin[i]);
             }
             wrefresh(gridWin);
@@ -185,6 +244,8 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
 
     // Cleanup
     for(int i = 0; i < playerNum; i++){
+        werase(StatusWin[i]);
+        wrefresh(StatusWin[i]);
         delwin(StatusWin[i]);
     }
 }
@@ -212,7 +273,7 @@ int main() {
     init_pair(6, COLOR_CYAN, COLOR_BLACK);
     init_pair(7, COLOR_WHITE, COLOR_BLACK);
 
-    int playerNum = 2;
+    int playerNum = 4;
     int width = 100, height = 40;
     int startX = (COLS - width) / 2, startY = (LINES - height) / 2;
     WINDOW* titleWin = newwin(height, width, startY, startX);
@@ -232,25 +293,15 @@ int main() {
             }
 
             case GameState::UsernameInput: {
-                drawUsernameInput(inputWin, username);
-                curs_set(1);
-                int ch = wgetch(inputWin);
-                if (ch == '\n') {
-                    state = GameState::GameLoop;
-                    curs_set(0);
-                } else if (ch == KEY_BACKSPACE || ch == 127) {
-                    if (!username.empty()) {
-                        username.pop_back();
-                    }
-                } else if (ch >= 32 && ch <= 126 && username.length() < 20) {
-                    username.push_back(ch);
-                }
+                handleUsernameInput(inputWin, username);
+                state = GameState::GameLoop;
                 break;
             }
 
             case GameState::GameLoop: {
-                std::vector<MapObject> staticObjects = generateStaticObjects(width, height, 300, 300);
+                std::vector<MapObject> staticObjects = generateStaticObjects(width, height, 100, 100);
                 gameLoop(gameWin, width, height, staticObjects, state, username, playerNum);
+                state = GameState::EndScreen;
                 break;
             }
 
