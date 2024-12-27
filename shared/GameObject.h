@@ -16,7 +16,7 @@ const int statusBlockWidth = 25;
 const int statusBlockHeight = 10; 
 enum class Direction {Right, Left, Up, Down};
 enum class GameState {TitleScreen, UsernameInput, GameLoop, EndScreen};
-enum class MapObjectType {Wall,Water};
+enum class MapObjectType {wall,water,bullet,tank};
 
 // game timer
 class GameTimer {
@@ -45,24 +45,19 @@ public:
 };
 
 // MapObjects
-class MapObject {
-private:
-    int x;
-    int y;
-    MapObjectType type;
-
+class MapObject : public GameObject{
 public:
-    MapObject(int x, int y, MapObjectType type) : x(x), y(y), type(type) {}
+    MapObject(int x, int y, MapObjectType type) : GameObject(x, y, type) {}
 
     int getX() const { return x; }
     int getY() const { return y; }
     MapObjectType getType() const { return type; }
-    bool isBlocking() const {return type == MapObjectType::Wall;}
-    bool isObstacle() const {return (type == MapObjectType::Water || type == MapObjectType::Wall);}
+    bool isBlocking() const {return type == MapObjectType::wall;}
+    bool isObstacle() const {return (type == MapObjectType::water || type == MapObjectType::wall);}
     char getSymbol() const {
         switch (type) {
-            case MapObjectType::Wall: return '#'; // wall
-            case MapObjectType::Water: return '~'; // water
+            case MapObjectType::wall: return '#'; // wall
+            case MapObjectType::water: return '~'; // water
             default: return ' ';
         }
     }
@@ -73,9 +68,9 @@ class GameObject {
 protected:
     int x;
     int y;
-
+    MapObjectType type;
 public:
-    GameObject(int x = 0, int y = 0) : x(x), y(y) {}
+    GameObject(int x = 0, int y = 0, MapObjectType type) : x(x), y(y), type(type) {}
     virtual ~GameObject() {}
 
     // function
@@ -101,7 +96,7 @@ private:
     bool active;
 
 public:
-    Bullet(int x, int y, Direction dir) : GameObject(x, y), direction(dir), active(true){}
+    Bullet(int x, int y, MapObjectType type = MapObjectType :: bullet, Direction dir) : GameObject(x, y, type), direction(dir), active(true){}
 
     static bool checkCollision(int x, int y, const std::vector<MapObject>& staticObjects) {
         for (const auto& obj : staticObjects) {
