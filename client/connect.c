@@ -73,7 +73,6 @@ char* joinRoom(int sockfd, const char* roomId) {
     char buf[64] = {0};
     int len = read(sockfd, buf, sizeof(buf) - 1);
     buf[len] = '\0';
-    // 伺服器回傳 "join,room_id\n" or "fail\n"
     if (strncmp(buf, "join,", 5) == 0) {
         return buf + 5;
     }
