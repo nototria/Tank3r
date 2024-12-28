@@ -7,4 +7,7 @@
 #define ROOM_MAX_CLIENTS 4
 #define COMMAND_SEP ','
 
+#define SCREEN_WIDTH 100
+#define SCREEN_HEIGHT 40
+
 #endif
