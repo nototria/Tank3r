@@ -9,8 +9,8 @@
 
 class ClientManager{
     struct ClientData{
-        enum State{inactive, wait_id, idle, wait_start, play} state;
-        std::string user_id;
+        enum State{inactive, wait_name, idle, wait_start, play} state;
+        std::string user_name;
         int id;
         int room_id;
         std::stringstream ss;

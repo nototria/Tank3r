@@ -26,11 +26,11 @@ inline void sep_str(const std::string &str, std::string &s1, std::string &s2, co
     s2.clear();
     bool flag=true;
     for(const auto &a:str){
-        if(a==c) flag=false;
-        else{
-            if(flag) s1+=a;
-            else s2+=a;
+        if(flag){
+            if(a==c) flag=false;
+            else s1+=a;
         }
+        else s2+=a;
     }
 }
 
@@ -68,8 +68,8 @@ bool ClientManager::add_client(const int &client_fd){
             this->pollfd_list[i].fd=client_fd;
             this->pollfd_list[i].events=POLLRDNORM;
             //init client_data_list
-            this->client_data_list[i].state=ClientData::wait_id;
-            this->client_data_list[i].user_id.clear();
+            this->client_data_list[i].state=ClientData::wait_name;
+            this->client_data_list[i].user_name.clear();
             this->client_data_list[i].room_id=-1;
             this->client_data_list[i].ss.clear();
             //send client id
@@ -154,11 +154,11 @@ void ClientManager::process_commands(const int idx){
 
     int tmp;
     switch (this->client_data_list[idx].state){
-    case ClientData::wait_id:
+    case ClientData::wait_name:
         if(is_int(tmp0) && std::stoi(tmp0)==client_obj.id){
-            client_obj.user_id=tmp1;
+            client_obj.user_name=tmp1;
             client_obj.state=ClientData::idle;
-            std::cout<<"set client "<<id2str(client_obj.id)<<" = "<<client_obj.user_id<<std::endl;
+            std::cout<<"set client "<<id2str(client_obj.id)<<" = "<<client_obj.user_name<<std::endl;
         }
         break;
     case ClientData::idle:
@@ -175,6 +175,7 @@ void ClientManager::process_commands(const int idx){
         else if(
             tmp0=="start" && is_int(tmp1) &&
             std::stoi(tmp1)==client_obj.room_id &&
+            this->room_data_list[client_obj.room_id].player_count()>1 &&
             this->room_data_list[client_obj.room_id].host_id==client_obj.id
         ) this->start_game(client_obj.room_id);
         break;
@@ -293,7 +294,7 @@ void ClientManager::start_game(const int room_id){
         this->client_data_list[item].state=ClientData::play;
         write(this->pollfd_list[item].fd,"start\n",6);
     }
-    
+
 }
 
 void ClientManager::check_state(){
@@ -305,11 +306,11 @@ void ClientManager::check_state(){
         if(flag) std::cout<<'\n';
         flag=true;
         std::cout<<"\tclient_id "<<id2str(client_data_list[i].id)<<'\n';
-        std::cout<<"\tuser_id "<<client_data_list[i].user_id<<'\n';
+        std::cout<<"\tuser_name "<<client_data_list[i].user_name<<'\n';
         std::cout<<"\tstate ";
         switch(this->client_data_list[i].state){
             case ClientData::inactive: std::cout<<"inactive";break;
-            case ClientData::wait_id: std::cout<<"wait_id";break;
+            case ClientData::wait_name: std::cout<<"wait_name";break;
             case ClientData::idle: std::cout<<"idle";break;
             case ClientData::wait_start: std::cout<<"wait_start";break;
             case ClientData::play: std::cout<<"play";break;
