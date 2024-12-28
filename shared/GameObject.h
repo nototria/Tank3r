@@ -111,6 +111,10 @@ public:
         return false;
     }
     
+    bool checkCollisionWithBullet(const Bullet& other) const {
+        return active && other.isActive() && x == other.getX() && y == other.getY();
+    }
+
     void move(int width, int height, const std::vector<MapObject>& staticObjects) {
         if (!active) return;
 
@@ -139,6 +143,7 @@ public:
         return x <= 0 || x >= width - 1 || y <= 0 || y >= height - 1;
     }
     bool isActive() const { return active; }
+    void setActive(bool isActive) { active = isActive; }
     wchar_t getSymbol() const {return L'*';}
 };
 
