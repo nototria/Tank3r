@@ -299,7 +299,8 @@ void handleUsernameInput(WINDOW* win, std::string& username) {
 
 void joinRoomById(WINDOW* win, std::string& roomId) {
     // Prompt user to enter a room ID
-    mvwprintw(win, 6, 1, "Enter Room ID: ");
+    wattron(win, COLOR_PAIR(COLOR_YELLOW));
+    mvwprintw(win, 18, 40, "Enter Room ID: ");
     wrefresh(win);
 
     echo();  // Enable input echo
@@ -307,26 +308,28 @@ void joinRoomById(WINDOW* win, std::string& roomId) {
 
     // Input room ID
     char input[20];
-    mvwgetstr(win, 6, 16, input);  // Get input from user
+    mvwgetstr(win, 18, 55, input);  // Get input from user
     roomId = std::string(input);   // Store the entered room ID
 
     noecho();  // Disable input echo
     curs_set(0);  // Hide cursor
 
     // In real application, use the room ID to connect to the server
-    mvwprintw(win, 8, 1, "Joining Room %s...", roomId.c_str());
+    mvwprintw(win, 20, 40, "Joining Room %s...", roomId.c_str());
     wrefresh(win);
+    wattron(win, COLOR_PAIR(COLOR_YELLOW));
     // Simulate joining the room with a short delay (for demonstration)
     napms(1000);
 }
 
 void quickJoin(WINDOW* win) {
     // Simulate joining a random room
-    mvwprintw(win, 20, 10, "Quick Joining to a Random Room...");
+    wattron(win, COLOR_PAIR(COLOR_YELLOW));
+    mvwprintw(win, 18, 33, "Quick Joining to a Random Room...");
+    wattron(win, COLOR_PAIR(COLOR_YELLOW));
     wrefresh(win);
-    // In a real application, generate a random room ID or select a predefined one
-    // Simulate delay before quick join
-    napms(1000);
+    // TBD: Implement quick join logic
+    napms(1000); // Simulation
 }
 
 void RoomMenu(WINDOW* win, GameState& state) {
@@ -398,28 +401,113 @@ void RoomMenu(WINDOW* win, GameState& state) {
                 selectedOption = (selectedOption + 1) % numOptions;
                 break;
             case '\n':  // Enter key
-                werase(win);
                 switch (selectedOption+1) {
                     case 1:  // Join a room by ID
+                        state = GameState::InRoom;
+                        mvwprintw(win, optionStartY + 0, optionStartX, "                                        ");
+                        mvwprintw(win, optionStartY + 1, optionStartX, "                                        ");
+                        mvwprintw(win, optionStartY + 2, optionStartX, "                                        ");
                         joinRoomById(win, roomId);
-                        state = GameState::GameLoop;
-                        return;
                         break;
 
                     case 2:  // Quick Join
+                        state = GameState::InRoom;
+                        mvwprintw(win, optionStartY + 0, optionStartX, "                                        ");
+                        mvwprintw(win, optionStartY + 1, optionStartX, "                                        ");
+                        mvwprintw(win, optionStartY + 2, optionStartX, "                                        ");
                         quickJoin(win);
-                        state = GameState::GameLoop;
-                        return;
                         break;
 
                     case 3: // back to typing username
                         state = GameState::UsernameInput;
-                        return;
                         break;
                 }
                 wrefresh(win);
-                napms(1000);  // Pause for a moment before exiting
                 return;
+                break;
+        }
+    }
+}
+
+void InRoomMenu(WINDOW* win, GameState& state, bool isHost) {
+    setlocale(LC_ALL, "");
+    keypad(win, TRUE);
+    nodelay(win, FALSE); // Blocking mode
+
+    int maxY, maxX;
+    getmaxyx(win, maxY, maxX);
+    const wchar_t* menuArt[] = {
+        L"██████╗  ██████╗  ██████╗ ███╗   ███╗",
+        L"██╔══██╗██╔═══██╗██╔═══██╗████╗ ████║",
+        L"██████╔╝██║   ██║██║   ██║██╔████╔██║",
+        L"██╔══██╗██║   ██║██║   ██║██║╚██╔╝██║",
+        L"██║  ██║╚██████╔╝╚██████╔╝██║ ╚═╝ ██║",
+        L"╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝     ╚═╝",};
+
+    int artWidth = wcslen(menuArt[0]);
+    int artLines = sizeof(menuArt) / sizeof(menuArt[0]);
+    int artStartX = (maxX - artWidth) / 2;
+    int artStartY = 6;
+
+    // Display ASCII art
+    werase(win);
+    wattron(win, COLOR_PAIR(1));
+    for (int i = 0; i < artLines; i++) {
+        mvwaddwstr(win, artStartY + i, artStartX, menuArt[i]);
+    }
+    wattroff(win, COLOR_PAIR(1));
+
+    // Room information message
+    const char* roomMsg = "You are in the Room!";
+    int roomMsgY = artStartY + artLines + 2;
+    int roomMsgX = (maxX - strlen(roomMsg)) / 2;
+    wattron(win, COLOR_PAIR(2) | A_BOLD);
+    mvwprintw(win, roomMsgY, roomMsgX, "%s", roomMsg);
+    wattroff(win, COLOR_PAIR(2) | A_BOLD);
+
+    // Option hints
+    const char* options[] = {
+        isHost ? "Start Game" : "Waiting for the Host to Start...",
+        "Exit Room",
+    };
+
+    int numOptions = sizeof(options) / sizeof(options[0]);
+    int optionStartY = roomMsgY + 3;
+    int optionStartX = (maxX - 40) / 2;
+    int selectedOption = 0;
+
+    while (true) {
+        for (int i = 0; i < numOptions; ++i) {
+            if (i == selectedOption) {
+                wattron(win, COLOR_PAIR(3) | A_REVERSE);
+            } else {
+                wattron(win, COLOR_PAIR(3));
+            }
+            mvwprintw(win, optionStartY + i, optionStartX, "%s", options[i]);
+            wattroff(win, COLOR_PAIR(3) | A_REVERSE);
+        }
+        wrefresh(win);
+
+        // Handle input
+        int ch = wgetch(win);
+        switch (ch) {
+            case KEY_UP:
+                if (isHost) selectedOption = (selectedOption - 1 + numOptions) % numOptions;
+                break;
+            case KEY_DOWN:
+                if (isHost) selectedOption = (selectedOption + 1) % numOptions;
+                break;
+            case '\n': // Enter key
+                if (isHost && selectedOption == 0) {
+                    // Start Game logic (Host only)
+                    state = GameState::GameLoop;
+                    return;
+                } else if (selectedOption == 1 || !isHost) {
+                    // Exit Room
+                    state = GameState::RoomMenu;
+                    return;
+                }
+                break;
         }
     }
 }
@@ -769,6 +857,11 @@ int main() {
                 break;
             }
 
+            case GameState::InRoom: {
+                InRoomMenu(roomWin, state, true);
+                break;
+            }
+
             case GameState::GameLoop: {
                 // TBD: Generate static objects
                 std::vector<MapObject> staticObjects = generateStaticObjects(width, height, 100, 100);
@@ -776,6 +869,7 @@ int main() {
                 gameLoop(gameWin, width, height, staticObjects, state, username, playerNum, PlayerNames);
                 break;
             }
+
             case GameState::LoseScreen:
             case GameState::WinScreen:
             case GameState::TieScreen: {
