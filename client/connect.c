@@ -6,6 +6,15 @@
 #include <arpa/inet.h>
 #include <stdbool.h>
 #include "../shared/GameParameters.h"
+#include <fcntl.h>
+
+void suppress_stderr() {
+    int fd = open("/dev/null", O_WRONLY);
+    if (fd != -1) {
+        dup2(fd, STDERR_FILENO);  // Redirect stderr to /dev/null
+        close(fd);
+    }
+}
 
 int connectToServer(const char* ip, int port) {
     int sockfd;
