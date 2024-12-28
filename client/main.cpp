@@ -464,6 +464,16 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
 
     // game loop
     while (loopRunning) {
+        if(playerNum == 1 && myTank.getHP() > 0){
+            state = GameState::WinScreen;
+            loopRunning = false;
+            break;
+        }else if(myTank.getHP() <= 0){
+            state = GameState::LoseScreen;
+            loopRunning = false;
+            break;
+        }
+        
         int ch = wgetch(gridWin);
         switch (ch) {
             case KEY_UP: {
@@ -540,7 +550,7 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
                 break;
             }
             case 'q': {
-                state = GameState::EndScreen;
+                state = GameState::TieScreen;
                 loopRunning = false;
                 break;
             }
@@ -574,7 +584,7 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
     }
 }
 
-void drawEndScreen(WINDOW* win) {
+void drawWinScreen(WINDOW* win) {
     setlocale(LC_ALL, "");
     int maxY, maxX;
     getmaxyx(win, maxY, maxX);
@@ -626,6 +636,110 @@ void drawEndScreen(WINDOW* win) {
     wrefresh(win);
 }
 
+void drawLoseScreen(WINDOW* win) {
+    setlocale(LC_ALL, "");
+    int maxY, maxX;
+    getmaxyx(win, maxY, maxX);
+
+    const wchar_t* loseArt[] = {
+        L" ██████╗  █████╗ ███╗   ███╗███████╗     ██████╗ ██╗   ██╗███████╗██████╗ ",
+        L"██╔════╝ ██╔══██╗████╗ ████║██╔════╝    ██╔═══██╗██║   ██║██╔════╝██╔══██╗",
+        L"██║  ███╗███████║██╔████╔██║█████╗      ██║   ██║██║   ██║█████╗  ██████╔╝",
+        L"██║   ██║██╔══██║██║╚██╔╝██║██╔══╝      ██║   ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗",
+        L"╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗    ╚██████╔╝ ╚████╔╝ ███████╗██║  ██║",
+        L" ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝     ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝"
+    };
+
+    int artWidth = wcslen(loseArt[0]);
+    int artLines = sizeof(loseArt) / sizeof(loseArt[0]);
+    int artStartX = (maxX - artWidth) / 2;
+    int artStartY = (maxY - artLines) / 3;
+
+    // Clear the window and draw border
+    werase(win);
+    wattron(win, COLOR_PAIR(1));
+    box(win, 0, 0);
+    wattroff(win, COLOR_PAIR(1));
+
+    // Render ASCII art
+    wattron(win, COLOR_PAIR(2));
+    for (int i = 0; i < artLines; i++) {
+        mvwaddwstr(win, artStartY + i, artStartX, loseArt[i]);
+    }
+    wattroff(win, COLOR_PAIR(2));
+
+    // Lose message
+    const char* loseMsg = "Sorry! You LOSE!";
+    int loseMsgX = (maxX - strlen(loseMsg)) / 2;
+    int loseMsgY = artStartY + artLines + 2;
+    wattron(win, COLOR_PAIR(3) | A_BOLD);
+    mvwprintw(win, loseMsgY, loseMsgX, "%s", loseMsg);
+    wattroff(win, COLOR_PAIR(3) | A_BOLD);
+
+    // Restart prompt
+    const char* restartPrompt = "Press 'r' to restart or 'q' to quit.";
+    int restartPromptX = (maxX - strlen(restartPrompt)) / 2;
+    int restartPromptY = loseMsgY + 2;
+    wattron(win, COLOR_PAIR(4) | A_BOLD);
+    mvwprintw(win, restartPromptY, restartPromptX, "%s", restartPrompt);
+    wattroff(win, COLOR_PAIR(4) | A_BOLD);
+
+    // Refresh window
+    wrefresh(win);
+}
+
+void drawTieScreen(WINDOW* win) {
+    setlocale(LC_ALL, "");
+    int maxY, maxX;
+    getmaxyx(win, maxY, maxX);
+
+    const wchar_t* tieArt[] = {
+        L"████████╗██╗███████╗",
+        L"╚══██╔══╝██║██╔════╝",
+        L"   ██║   ██║█████╗  ",
+        L"   ██║   ██║██╔══╝  ",
+        L"   ██║   ██║███████╗",
+        L"   ╚═╝   ╚═╝╚══════╝"
+    };
+
+    int artWidth = wcslen(tieArt[0]);
+    int artLines = sizeof(tieArt) / sizeof(tieArt[0]);
+    int artStartX = (maxX - artWidth) / 2;
+    int artStartY = (maxY - artLines) / 3;
+
+    // Clear the window and draw border
+    werase(win);
+    wattron(win, COLOR_PAIR(1));
+    box(win, 0, 0);
+    wattroff(win, COLOR_PAIR(1));
+
+    // Render ASCII art
+    wattron(win, COLOR_PAIR(2));
+    for (int i = 0; i < artLines; i++) {
+        mvwaddwstr(win, artStartY + i, artStartX, tieArt[i]);
+    }
+    wattroff(win, COLOR_PAIR(2));
+
+    // Tie message
+    const char* tieMsg = "It's a TIE!";
+    int tieMsgX = (maxX - strlen(tieMsg)) / 2;
+    int tieMsgY = artStartY + artLines + 2;
+    wattron(win, COLOR_PAIR(3) | A_BOLD);
+    mvwprintw(win, tieMsgY, tieMsgX, "%s", tieMsg);
+    wattroff(win, COLOR_PAIR(3) | A_BOLD);
+
+    // Restart prompt
+    const char* restartPrompt = "Press 'r' to restart or 'q' to quit.";
+    int restartPromptX = (maxX - strlen(restartPrompt)) / 2;
+    int restartPromptY = tieMsgY + 2;
+    wattron(win, COLOR_PAIR(4) | A_BOLD);
+    mvwprintw(win, restartPromptY, restartPromptX, "%s", restartPrompt);
+    wattroff(win, COLOR_PAIR(4) | A_BOLD);
+
+    // Refresh window
+    wrefresh(win);
+}
+
 int main() {
     // TBD: get other players info from server (playerNum)
     int playerNum = 4, width, height;
@@ -660,12 +774,14 @@ int main() {
                 std::vector<MapObject> staticObjects = generateStaticObjects(width, height, 100, 100);
                 // TBD: get other players info from server (PlayerNames)
                 gameLoop(gameWin, width, height, staticObjects, state, username, playerNum, PlayerNames);
-                state = GameState::EndScreen;
                 break;
             }
-
-            case GameState::EndScreen: {
-                drawEndScreen(endWin);
+            case GameState::LoseScreen:
+            case GameState::WinScreen:
+            case GameState::TieScreen: {
+                if(state == GameState::WinScreen) drawWinScreen(endWin);
+                else if(state == GameState::LoseScreen) drawLoseScreen(endWin);
+                else if(state == GameState::TieScreen) drawTieScreen(endWin);
                 int ch = wgetch(endWin);
                 if (ch == 'r' || ch == 'R') {
                     state = GameState::UsernameInput;
