@@ -289,12 +289,19 @@ void ClientManager::exit_room(const int client_id, const int room_id){
 
 void ClientManager::start_game(const int room_id){
     auto &room_obj=this->room_data_list[room_id];
-    room_obj.state=RoomData::play;
+    memset(send_buffer,0,sizeof(send_buffer));
+    snprintf(send_buffer,1024,"start,%.4d\n",room_obj.player_count());
+    int str_n=10;
+    for(auto &item:room_obj.client_id_set){
+        snprintf(send_buffer+str_n,1024-str_n,"%s,%s\n",item,this->client_data_list[item].user_name.c_str());
+        str_n+=(6+this->client_data_list[item].user_name.size());
+    }
+    std::cout<<send_buffer<<std::endl;
     for(auto &item:room_obj.client_id_set){
         this->client_data_list[item].state=ClientData::play;
-        write(this->pollfd_list[item].fd,"start\n",6);
+        write(this->pollfd_list[item].fd,send_buffer,str_n);
     }
-
+    room_obj.state=RoomData::play;
 }
 
 void ClientManager::check_state(){

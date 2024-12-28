@@ -4,7 +4,8 @@
 if server is full, **server** closes the connection\
 else **server** sends ```client_id``` to the **client**\
 and set the **client** state to ```wait_name```
-2. **client** send ```"client_id,user_name"``` to server
+2. **client** send ```"client_id,user_name"``` to server\
+**user_name** cannot contain ```','```
 3. **client** has two options
     - random match\
         send ```"join,-1\n"```\
@@ -14,7 +15,8 @@ and set the **client** state to ```wait_name```
         join with **room** number
 4. **server** reply ```"join,room_id\n"``` or ```"fail\n"```
 5. send ```"exit\n"``` to exit the room
-5. host can send ```start,room_id``` to start the game
+6. host can send ```"start,room_id\n"``` to start the game
+7. server send ```"start,player_count\nclient_id,user_name\n..."``` to every client
 
 ### game start
 1. server send static game data to new client
