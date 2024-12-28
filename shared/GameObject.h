@@ -153,7 +153,7 @@ private:
     Direction direction;
     int color;
     int hp;
-    bool isAlive; // New flag
+    bool isAlive;
     std::string name;
     std::vector<Bullet> bullets;
 
@@ -194,11 +194,11 @@ public:
         hp = newHP;
         if (hp <= 0) {
             hp = 0;
-            isAlive = false; // Mark tank as dead
+            isAlive = false;
         }
     }
 
-    bool IsAlive() const { return isAlive; } // Getter for isAlive
+    bool IsAlive() const { return isAlive; }
     void revive(int newHP = 20) {
         hp = newHP;
         isAlive = true; // Revive the tank
