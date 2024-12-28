@@ -300,16 +300,28 @@ void handleUsernameInput(WINDOW* win, std::string& username) {
 void joinRoomById(WINDOW* win, std::string& roomId) {
     // Prompt user to enter a room ID
     wattron(win, COLOR_PAIR(COLOR_YELLOW));
-    mvwprintw(win, 18, 40, "Enter Room ID: ");
+    mvwprintw(win, 18, 34, "Enter Room ID (4 digits): ");
     wrefresh(win);
 
     echo();  // Enable input echo
     curs_set(1);  // Show cursor
 
     // Input room ID
-    char input[20];
-    mvwgetstr(win, 18, 55, input);  // Get input from user
-    roomId = std::string(input);   // Store the entered room ID
+    char input[4];
+    bool validInput = false;
+    while (!validInput) {
+        mvwgetnstr(win, 18, 60, input, 4);  // Get input from user with max length 4
+        roomId = std::string(input);   // Store the entered room ID
+
+        // Check if the input is exactly 4 digits
+        if (roomId.length() == 4 && std::all_of(roomId.begin(), roomId.end(), ::isdigit)) {
+            validInput = true;
+        } else {
+            mvwprintw(win, 18, 60, "    ");
+            mvwprintw(win, 16, 30, "Invalid Room ID. Please enter 4 digits.");
+            wrefresh(win);
+        }
+    }
 
     noecho();  // Disable input echo
     curs_set(0);  // Hide cursor
@@ -332,8 +344,7 @@ void quickJoin(WINDOW* win) {
     napms(1000); // Simulation
 }
 
-void RoomMenu(WINDOW* win, GameState& state) {
-    std::string roomId;
+void RoomMenu(WINDOW* win, GameState& state, std::string& roomId) {
     setlocale(LC_ALL, "");
     keypad(win, TRUE);
     nodelay(win, FALSE); // blocking mode
@@ -429,7 +440,7 @@ void RoomMenu(WINDOW* win, GameState& state) {
     }
 }
 
-void InRoomMenu(WINDOW* win, GameState& state, bool isHost) {
+void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId) {
     setlocale(LC_ALL, "");
     keypad(win, TRUE);
     nodelay(win, FALSE); // Blocking mode
@@ -458,11 +469,11 @@ void InRoomMenu(WINDOW* win, GameState& state, bool isHost) {
     wattroff(win, COLOR_PAIR(1));
 
     // Room information message
-    const char* roomMsg = "You are in the Room!";
+    const char* roomMsg = "You are in the Room with ID: ";
     int roomMsgY = artStartY + artLines + 2;
-    int roomMsgX = (maxX - strlen(roomMsg)) / 2;
+    int roomMsgX = (maxX - strlen(roomMsg) - roomId.length()) / 2;
     wattron(win, COLOR_PAIR(2) | A_BOLD);
-    mvwprintw(win, roomMsgY, roomMsgX, "%s", roomMsg);
+    mvwprintw(win, roomMsgY, roomMsgX, "%s%s", roomMsg, roomId.c_str());
     wattroff(win, COLOR_PAIR(2) | A_BOLD);
 
     // Option hints
@@ -473,7 +484,7 @@ void InRoomMenu(WINDOW* win, GameState& state, bool isHost) {
 
     int numOptions = sizeof(options) / sizeof(options[0]);
     int optionStartY = roomMsgY + 3;
-    int optionStartX = (maxX - 40) / 2;
+    int optionStartX = (maxX - 12) / 2;
     int selectedOption = 0;
 
     while (true) {
@@ -835,6 +846,7 @@ int main() {
     WINDOW *titleWin, *inputWin, *roomWin,*gameWin, *endWin;
     GameState state;
     std::string username="";
+    std::string roomId="";
     initGame(width, height, titleWin, inputWin, roomWin, gameWin, endWin, state);
 
     bool running = true;
@@ -853,18 +865,18 @@ int main() {
             }
 
             case GameState::RoomMenu: {
-                RoomMenu(roomWin, state);
+                RoomMenu(roomWin, state, roomId);
                 break;
             }
 
             case GameState::InRoom: {
-                InRoomMenu(roomWin, state, true);
+                InRoomMenu(roomWin, state, true, roomId);
                 break;
             }
 
             case GameState::GameLoop: {
                 // TBD: Generate static objects
-                std::vector<MapObject> staticObjects = generateStaticObjects(width, height, 100, 100);
+                std::vector<MapObject> staticObjects = generateStaticObjects(width, height, 400, 400);
                 // TBD: get other players info from server (PlayerNames)
                 gameLoop(gameWin, width, height, staticObjects, state, username, playerNum, PlayerNames);
                 break;
