@@ -1,6 +1,5 @@
 # Server
 ### connection
-```*_id``` is a 4-digit number
 1. client connect to server with tcp\
 if server is full, **server** closes the connection\
 else **server** sends ```client_id``` to the **client**\
@@ -15,11 +14,9 @@ and set the **client** state to ```wait_name```
         send ```"join,room_id\n"```\
         join with **room** number
 4. **server** reply ```"join,room_id\n"``` or ```"fail\n"```
-5. **server** send ```"host,room_id"``` to **host**\
-if the host exits the room, new host will receive this message
-6. send ```"exit\n"``` to exit the room
-7. host can send ```"start,room_id\n"``` to start the game
-8. server send ```"start,player_count\nclient_id,user_name\n..."``` to every client
+5. send ```"exit\n"``` to exit the room
+6. host can send ```"start,room_id\n"``` to start the game
+7. server send ```"start,player_count\nclient_id,user_name\n..."``` to every client
 
 ### game start
 1. server send static game data to new client
