@@ -3,22 +3,18 @@
 1. client connect to server with tcp\
 if server is full, **server** closes the connection\
 else **server** sends ```client_id``` to the **client**\
-and set the **client** state to ```wait_id```
-2. **client** send ```"client_id user_name"``` to server\
-if ```client_id``` not match
-3. client has two options
+and set the **client** state to ```wait_name```
+2. **client** send ```"client_id,user_name"``` to server
+3. **client** has two options
     - random match\
-        send ```"join\n"```\
-        join a random **room** that is waiting to start\
-        if no room is available, create the **room**
+        send ```"join,-1\n"```\
+        join a random **room**
     - join with **room** number\
-        send ```"%.4d\n"```\
-        if the **room** doesn't exist, create the **room**\
-        if the status of the **room** is waiting, join the **room**\
-        if the status of the **room** is playing, refuse
-4. **server** reply the **room** number ```"%.4d\n"``` or ```"fail\n"```
-5. if there are at least two **players** in the **room**,\
-the first **player** can start the game (send ```"start\n"``` to server)
+        send ```"join,room_id\n"```\
+        join with **room** number
+4. **server** reply ```"join,room_id\n"``` or ```"fail\n"```
+5. send ```"exit\n"``` to exit the room
+5. host can send ```start,room_id``` to start the game
 
 ### game start
 1. server send static game data to new client
