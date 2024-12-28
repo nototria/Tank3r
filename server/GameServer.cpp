@@ -175,5 +175,7 @@ void GameServer::listen(){
         }
         this->recv_connection();
         this->recv_commands();
+        cli_mgr.check_state();
+        room_mgr.check_state();
     }
 }

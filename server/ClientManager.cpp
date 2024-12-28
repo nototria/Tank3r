@@ -5,6 +5,7 @@
 #include<sys/socket.h>
 #include<netinet/in.h>
 #include<unistd.h>
+#include"../shared/GameUtils.hpp"
 
 ClientManager::ClientManager(){
     //init client data list
@@ -59,4 +60,37 @@ const std::string& ClientManager::get_user_name(const int client_id) const{
 
 const int& ClientManager::get_room_id(const int client_id) const{
     return client_data_list[client_id].room_id;
+}
+
+void ClientManager::check_state() const{
+    std::cout<<"ClientManager{\n";
+    bool flag=false;
+    for(int i=0;i<MAX_CLIENTS;++i){
+        auto &client_obj=client_data_list[i];
+        if(client_obj.state==ClientData::inactive) continue;
+        if(flag) std::cout<<",\n";
+        flag=true;
+
+        std::cout<<"\t{";
+        std::cout<<"client_id : "<<id2str(client_obj.id);
+
+        std::cout<<", state: ";
+        switch (client_obj.state){
+        case ClientData::wait_name: std::cout<<"wait_name";break;
+        case ClientData::idle: std::cout<<"idle";break;
+        case ClientData::wait_start: std::cout<<"wait_start";break;
+        case ClientData::play: std::cout<<"play";break;
+        default:break;
+        }
+
+        std::cout<<", user_name : "<<client_obj.user_name;
+        
+        std::cout<<", room_id : ";
+        if(client_obj.room_id>=0) std::cout<<id2str(client_obj.room_id);
+        else std::cout<<"none";
+
+        std::cout<<"}";
+    }
+    std::cout<<"\n}\n";
+    std::cout.flush();
 }

@@ -16,7 +16,8 @@ class RoomManager{
 public:
     RoomManager();
     //return true if join succeful
-    bool join_room(const int client_id, int room_id);
+    //room_id will set to one it joined
+    bool join_room(const int client_id, int &room_id);
     //return true if host change
     bool exit_room(const int, const int);
     //start create threads for the game and change state
@@ -24,6 +25,7 @@ public:
     int get_host_id(const int);
     int player_count(const int);
     const std::set<int>& get_clients(const int);
+    void check_state();
 };
 
 #endif

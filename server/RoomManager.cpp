@@ -1,4 +1,5 @@
 #include"RoomManager.hpp"
+#include"../shared/GameUtils.hpp"
 #include<iostream>
 
 inline int RoomManager::RoomData::player_count() const{
@@ -18,7 +19,7 @@ RoomManager::RoomManager(){
     }
 }
 
-bool RoomManager::join_room(const int client_id, int room_id){
+bool RoomManager::join_room(const int client_id, int &room_id){
     std::cout<<"call join room"<<std::endl;
     if(room_id>=MAX_ROOMS) return false;
     //if room_id < 0, then random match
@@ -73,7 +74,6 @@ bool RoomManager::exit_room(const int client_id, const int room_id){
     if(room_obj.host_id==client_id){
         room_obj.host_id=*(room_obj.client_id_set.begin());
         return 1;
-
     }
     return 0;
 }
@@ -94,4 +94,38 @@ int RoomManager::player_count(const int room_id){
 
 const std::set<int>& RoomManager::get_clients(const int room_id){
     return room_data_list[room_id].client_id_set;
+}
+
+void RoomManager::check_state(){
+    std::cout<<"RoomManager{\n";
+    bool flag=false;
+    for(int i=0;i<MAX_ROOMS;++i){
+        auto &room_obj=room_data_list[i];
+        if(room_obj.state==RoomData::inactive) continue;
+        if(flag) std::cout<<",\n";
+        flag=true;
+        std::cout<<"\t{";
+        std::cout<<"room_id : "<<id2str(room_obj.id);
+        std::cout<<", state : ";
+        switch (room_obj.state){
+        case RoomData::wait: std::cout<<"wait";break;
+        case RoomData::play: std::cout<<"play";break;
+        default: break;
+        }
+
+        std::cout<<", host_id : "<<id2str(room_obj.host_id);
+        
+        std::cout<<", clients: {";
+        bool flag0=false;
+        for(auto &item:room_obj.client_id_set){
+            if(flag0) std::cout<<", ";
+            flag0=true;
+            std::cout<<id2str(item);
+        }
+        std::cout<<"}";
+        
+        std::cout<<"}";
+    }
+    std::cout<<"\n}\n";
+    std::cout.flush();
 }

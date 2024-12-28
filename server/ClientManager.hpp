@@ -34,6 +34,8 @@ public:
     const int& get_room_id(const int client_id) const;
 
     void start_game(const int);
+
+    void check_state() const;
 };
 
 #endif
