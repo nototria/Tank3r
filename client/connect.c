@@ -59,7 +59,7 @@ char* joinRoom(int sockfd, const char* roomId) {
     } else {
         snprintf(msg, sizeof(msg), "join,%s\n", roomId);
     }
-    if (write(sockfd, msg, strlen(msg)) < 0) return false;
+    if (write(sockfd, msg, strlen(msg)) < 0) return NULL;
 
     char buf[64] = {0};
     int len = read(sockfd, buf, sizeof(buf) - 1);
