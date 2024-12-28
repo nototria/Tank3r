@@ -153,6 +153,7 @@ private:
     Direction direction;
     int color;
     int hp;
+    bool isAlive; // New flag
     std::string name;
     std::vector<Bullet> bullets;
 
@@ -166,9 +167,11 @@ public:
             default: return L'?';
         }
     }
-    // constructor
+
+    // Constructor
     Tank(int x, int y, Direction dir = Direction::Up, int color = COLOR_BLUE, int hp = 20, const std::string& name = "Player")
-        : GameObject(x, y, MapObjectType::tank), direction(dir), color(color), hp(hp), name(name) {}
+        : GameObject(x, y, MapObjectType::tank), direction(dir), color(color), hp(hp), isAlive(true), name(name) {}
+
     static std::vector<Tank> createTanks(int playerNum, const std::string remotePlayerNames[], int gridWidth, int gridHeight) {
         std::vector<Tank> tanks;
         int startX = gridWidth / 2;
@@ -182,27 +185,41 @@ public:
         return tanks;
     }
 
-    // tank own function
-    void setDirection(Direction dir) {direction = dir;}
+    // Tank own functions
+    void setDirection(Direction dir) { direction = dir; }
     Direction getDirection() const { return direction; }
 
     int getHP() const { return hp; }
-    void setHP(int newHP) { hp = newHP; }
+    void setHP(int newHP) {
+        hp = newHP;
+        if (hp <= 0) {
+            hp = 0;
+            isAlive = false; // Mark tank as dead
+        }
+    }
 
-    void setName(const std::string& newName) {name = newName;}
-    std::string getName() const {return name;}
+    bool IsAlive() const { return isAlive; } // Getter for isAlive
+    void revive(int newHP = 20) {
+        hp = newHP;
+        isAlive = true; // Revive the tank
+    }
 
-    void setColor(const int& newColor) {color = newColor;}
-    int getColor() {return color;}
+    void setName(const std::string& newName) { name = newName; }
+    std::string getName() const { return name; }
+
+    void setColor(const int& newColor) { color = newColor; }
+    int getColor() { return color; }
 
     static bool checkTankCollision(int nextX, int nextY, const std::vector<MapObject>& staticObjects) {
         for (const auto& obj : staticObjects) {
-            if (obj.isObstacle() && obj.getX() == nextX && obj.getY() == nextY) {return true;}
+            if (obj.isObstacle() && obj.getX() == nextX && obj.getY() == nextY) {
+                return true;
+            }
         }
         return false;
     }
 
-    // bullet control
+    // Bullet control
     void fireBullet() { bullets.emplace_back(x, y, direction); }
     std::vector<Bullet>& getBullets() { return bullets; }
     void updateBullets(int width, int height, const std::vector<MapObject>& staticObjects) {
