@@ -14,7 +14,7 @@ and set the **client** state to ```wait_name```
         send ```"join,room_id\n"```\
         join with **room** number
 4. **server** reply ```"join,room_id\n"``` or ```"fail\n"```
-5. send ```"exit\n"``` to exit the room
+5. send ```"exit,room_id\n"``` to exit the room
 6. host can send ```"start,room_id\n"``` to start the game
 7. server send ```"start,player_count\nclient_id,user_name\n..."``` to every client
 
