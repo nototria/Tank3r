@@ -3,7 +3,7 @@
 #include<sys/socket.h>
 #include<netinet/in.h>
 #include<unistd.h>
-#include"ClientManager.hpp"
+#include"GameServer.hpp"
 signed main(){
     struct sockaddr_in server_addr;
     memset(&server_addr,0,sizeof(server_addr));
@@ -23,9 +23,8 @@ signed main(){
     }
     listen(listen_fd,1024);
     
-    ClientManager client_mgr(listen_fd);
-
-    client_mgr.listen();
+    GameServer server(listen_fd);
+    server.listen();
 
     return 0;
 }
