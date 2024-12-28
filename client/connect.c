@@ -7,6 +7,16 @@
 #include <stdbool.h>
 #include "../shared/GameParameters.h"
 #include <fcntl.h>
+#include <pthread.h>
+
+typedef struct {
+    int sockfd;
+    bool startReceived;
+    int playerCount;
+    char** playerInfo;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+} SharedData;
 
 void suppress_stderr() {
     int fd = open("/dev/null", O_WRONLY);
@@ -85,7 +95,49 @@ bool startGame(int sockfd, const char* roomId) {
     return (write(sockfd, msg, strlen(msg)) > 0);
 }
 
-// 離開房間 "exit\n"
-bool exitRoom(int sockfd) {
-    return (write(sockfd, "exit\n", 5) > 0);
+void* listenerThread(void* arg) {
+    SharedData* data = (SharedData*)arg;
+    char buf[256];
+    while (true) {
+        int len = read(data->sockfd, buf, sizeof(buf)-1);
+        if (len <= 0) break; // 失敗或斷線
+        buf[len] = '\0';
+
+        if (strncmp(buf, "start,", 6) == 0) {
+            pthread_mutex_lock(&data->mutex);
+            // 解析玩家數
+            char* token = strtok(buf + 6, "\n");
+            data->playerCount = atoi(token);
+            // 分配 playerInfo
+            data->playerInfo = (char**)malloc(data->playerCount * sizeof(char*));
+            for (int i = 0; i < data->playerCount; i++) {
+                token = strtok(NULL, "\n");
+                data->playerInfo[i] = strdup(token);
+            }
+            data->startReceived = true;
+            pthread_cond_signal(&data->cond);
+            pthread_mutex_unlock(&data->mutex);
+        }
+    }
+    return NULL;
+}
+
+bool waitForStart(SharedData* data) {
+    pthread_mutex_lock(&data->mutex);
+    while (!data->startReceived) {
+        pthread_cond_wait(&data->cond, &data->mutex);
+    }
+    pthread_mutex_unlock(&data->mutex);
+    return true;
+}
+
+// leave room "exit,room_id\n"
+bool exitRoom(int sockfd, const char* roomId) {
+    char msg[32] = {0};
+    snprintf(msg, sizeof(msg), "exit,%s\n", roomId);
+    if (write(sockfd, msg, strlen(msg)) < 0) {
+        return false;
+    }
+    close(sockfd);
+    return true;
 }
