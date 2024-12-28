@@ -15,7 +15,7 @@
 const int statusBlockWidth = 25;
 const int statusBlockHeight = 10; 
 enum class Direction {Right, Left, Up, Down};
-enum class GameState {TitleScreen, UsernameInput, RoomMenu, GameLoop, WinScreen, LoseScreen, TieScreen};
+enum class GameState {TitleScreen, UsernameInput, RoomMenu, InRoom, GameLoop, WinScreen, LoseScreen, TieScreen};
 enum class MapObjectType {empty, wall,water,bullet,tank};
 
 // game timer
