@@ -6,6 +6,7 @@
 #include <cstring>
 #include <vector>
 #include <cmath>
+#include <algorithm>
 #include <chrono>
 #include <unistd.h>
 #include <ncurses.h>
