@@ -5,8 +5,8 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <stdbool.h>
+#include "../shared/GameParameters.h"
 
-// 建立 TCP 連線並回傳 socket，失敗回傳 -1
 int connectToServer(const char* ip, int port) {
     int sockfd;
     struct sockaddr_in serv_addr;
@@ -31,30 +31,28 @@ int connectToServer(const char* ip, int port) {
     return sockfd;
 }
 
-// 接收伺服器給定的 client_id (四位數)，伺服器若滿可能關閉連線
 int receiveClientId(int sockfd) {
     char buf[16] = {0};
     int len = read(sockfd, buf, sizeof(buf) - 1);
     if (len <= 0) {
         return -1; // 伺服器關閉或讀取失敗
     }
+    buf[len] = '\0';
     return atoi(buf);
 }
 
-// 傳送 "client_id,user_name" 給伺服器，user_name 不可含 ','
 bool sendUserName(int sockfd, int clientId, const char* userName) {
     if (strchr(userName, ',') != NULL) return false; // 不允許逗號
 
     char msg[128] = {0};
-    snprintf(msg, sizeof(msg), "%04d,%s", clientId, userName);
+    snprintf(msg, sizeof(msg), "%04d,%s\n", clientId, userName);
     if (write(sockfd, msg, strlen(msg)) < 0) {
         return false;
     }
     return true;
 }
 
-// 加入房間 "join,-1\n" 或 "join,roomId\n"
-bool joinRoom(int sockfd, const char* roomId) {
+char* joinRoom(int sockfd, const char* roomId) {
     char msg[32] = {0};
     if (strcmp(roomId, "-1") == 0) {
         snprintf(msg, sizeof(msg), "join,-1\n");
@@ -65,15 +63,14 @@ bool joinRoom(int sockfd, const char* roomId) {
 
     char buf[64] = {0};
     int len = read(sockfd, buf, sizeof(buf) - 1);
-    if (len <= 0) return false;
+    buf[len] = '\0';
     // 伺服器回傳 "join,room_id\n" or "fail\n"
     if (strncmp(buf, "join,", 5) == 0) {
-        return true;
+        return buf + 5;
     }
-    return false;
+    return NULL;
 }
 
-// 主機可使用 "start,room_id\n"
 bool startGame(int sockfd, const char* roomId) {
     char msg[32] = {0};
     snprintf(msg, sizeof(msg), "start,%s\n", roomId);
