@@ -1,6 +1,7 @@
 #include"RoomManager.hpp"
 #include"../shared/GameUtils.hpp"
 #include<iostream>
+#include<vector>
 
 inline int RoomManager::RoomData::player_count() const{
     return this->client_id_set.size();
