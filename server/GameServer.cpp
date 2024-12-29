@@ -103,7 +103,7 @@ void GameServer::start_game(const int room_id){
     srand(time(0));
     snprintf(send_buffer+str_idx,1024-str_idx,"seed,%lu\n",(unsigned long)random());
     for(const auto &client_id:room_mgr.get_clients(room_id)){
-        write(pollfd_list[client_id].fd,send_buffer,str_idx);
+        write(pollfd_list[client_id].fd,send_buffer,strlen(send_buffer));
     }
 }
 
