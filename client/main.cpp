@@ -1,6 +1,7 @@
 #include <ncurses.h>
 #include "../shared/GameObject.h"
 #include "../shared/map_generator.cpp"
+#include "../client/connect.cpp"
 
 // server side
 void checkBulletTankCollisions(std::vector<Tank>& tanks) {
@@ -77,6 +78,7 @@ void initGame(int& width, int& height, WINDOW*& titleWin, WINDOW*& inputWin, WIN
     setlocale(LC_ALL, "");
 
     // Initialize color pairs
+    init_color(COLOR_GRAY, 300, 300, 300);
     init_pair(1, COLOR_RED, COLOR_BLACK);
     init_pair(2, COLOR_GREEN, COLOR_BLACK);
     init_pair(3, COLOR_YELLOW, COLOR_BLACK);
@@ -84,9 +86,18 @@ void initGame(int& width, int& height, WINDOW*& titleWin, WINDOW*& inputWin, WIN
     init_pair(5, COLOR_MAGENTA, COLOR_BLACK);
     init_pair(6, COLOR_CYAN, COLOR_BLACK);
     init_pair(7, COLOR_WHITE, COLOR_BLACK);
+    init_pair(8, COLOR_GRAY, COLOR_BLACK);
 
-    width = 100;
-    height = 40;
+    init_pair(11, COLOR_RED, COLOR_CYAN);
+    init_pair(12, COLOR_GREEN, COLOR_CYAN);
+    init_pair(13, COLOR_YELLOW, COLOR_CYAN);
+    init_pair(14, COLOR_BLUE, COLOR_CYAN);
+    init_pair(15, COLOR_MAGENTA, COLOR_CYAN);
+    init_pair(16, COLOR_CYAN, COLOR_CYAN);
+    init_pair(17, COLOR_WHITE, COLOR_CYAN);
+
+    width = SCREEN_WIDTH;
+    height = SCREEN_HEIGHT;
 
     int startX = (COLS - width) / 2;
     int startY = (LINES - height) / 2;
@@ -111,15 +122,30 @@ void renderTank(WINDOW* win, Tank& tank) {
 
     wattron(win, COLOR_PAIR(color)); 
     mvwadd_wch(win, y, x, &cc); //tank body
-    for (const auto& bullet : tank.getBullets()) { // bullets
-        mvwaddch(win, bullet.getY(), bullet.getX(), bullet.getSymbol());
-    }
     wattroff(win, COLOR_PAIR(color));
+    for (const auto& bullet : tank.getBullets()) { // bullets
+        if (bullet.getInWater()) {
+            wattron(win, COLOR_PAIR(color+10));
+            mvwaddch(win, bullet.getY(), bullet.getX(), bullet.getSymbol());
+            wattroff(win, COLOR_PAIR(color+10));
+        } else {
+            wattron(win, COLOR_PAIR(color));
+            mvwaddch(win, bullet.getY(), bullet.getX(), bullet.getSymbol());
+            wattroff(win, COLOR_PAIR(color));
+        }
+    }
 }
 
 void renderStaticObjects(WINDOW* win, const std::vector<MapObject>& objects) {
+    setlocale(LC_ALL, "");
     for (const auto& obj : objects) {
-        mvwaddch(win, obj.getY(), obj.getX(), obj.getSymbol());
+        if(obj.getType() == MapObjectType::wall) {
+            wattron(win, COLOR_PAIR(COLOR_GRAY));
+        } else if(obj.getType() == MapObjectType::water) {
+            wattron(win, COLOR_PAIR(COLOR_CYAN));
+        }
+        mvwaddwstr(win, obj.getY(), obj.getX(), obj.getSymbol().c_str());
+        wattroff(win, COLOR_PAIR(COLOR_WHITE));
     }
 }
 
@@ -243,19 +269,21 @@ void drawUsernameInput(WINDOW* win, const std::string& username) {
 void drawCustomBorder(WINDOW* win) {
     std::setlocale(LC_ALL, "");
     cchar_t vertical, horizontal, topLeft, topRight, bottomLeft, bottomRight;
-    wchar_t verticalChar[] = {L'║', 0};
-    wchar_t horizontalChar[] = {L'═', 0};
-    wchar_t topLeftChar[] = {L'╔', 0};
-    wchar_t topRightChar[] = {L'╗', 0};
-    wchar_t bottomLeftChar[] = {L'╚', 0};
-    wchar_t bottomRightChar[] = {L'╝', 0};
+    wchar_t verticalChar[] = {L'▒', 0};
+    wchar_t horizontalChar[] = {L'▒', 0};
+    wchar_t topLeftChar[] = {L'▒', 0};
+    wchar_t topRightChar[] = {L'▒', 0};
+    wchar_t bottomLeftChar[] = {L'▒', 0};
+    wchar_t bottomRightChar[] = {L'▒', 0};
     setcchar(&vertical, verticalChar, 0, 0, nullptr);
     setcchar(&horizontal, horizontalChar, 0, 0, nullptr);
     setcchar(&topLeft, topLeftChar, 0, 0, nullptr);
     setcchar(&topRight, topRightChar, 0, 0, nullptr);
     setcchar(&bottomLeft, bottomLeftChar, 0, 0, nullptr);
     setcchar(&bottomRight, bottomRightChar, 0, 0, nullptr);
+    wattron(win, COLOR_PAIR(COLOR_CYAN));
     wborder_set(win, &vertical, &vertical, &horizontal, &horizontal,&topLeft, &topRight, &bottomLeft, &bottomRight);
+    wattroff(win, COLOR_PAIR(COLOR_CYAN));
 }
 
 void handleUsernameInput(WINDOW* win, std::string& username) {
@@ -297,23 +325,19 @@ void handleUsernameInput(WINDOW* win, std::string& username) {
     noecho();
 }
 
-void joinRoomById(WINDOW* win, std::string& roomId) {
+void joinRoomById(WINDOW* win, std::string& roomId, int& connfd, int& clientId, std::string& username) {
     // Prompt user to enter a room ID
+    nodelay(win, FALSE); // Blocking mode
     wattron(win, COLOR_PAIR(COLOR_YELLOW));
     mvwprintw(win, 18, 34, "Enter Room ID (4 digits): ");
     wrefresh(win);
-
-    echo();  // Enable input echo
-    curs_set(1);  // Show cursor
-
-    // Input room ID
+    echo();
+    curs_set(1);
     char input[4];
     bool validInput = false;
     while (!validInput) {
-        mvwgetnstr(win, 18, 60, input, 4);  // Get input from user with max length 4
-        roomId = std::string(input);   // Store the entered room ID
-
-        // Check if the input is exactly 4 digits
+        mvwgetnstr(win, 18, 60, input, 4);
+        roomId = std::string(input);
         if (roomId.length() == 4 && std::all_of(roomId.begin(), roomId.end(), ::isdigit)) {
             validInput = true;
         } else {
@@ -322,32 +346,34 @@ void joinRoomById(WINDOW* win, std::string& roomId) {
             wrefresh(win);
         }
     }
-
-    noecho();  // Disable input echo
-    curs_set(0);  // Hide cursor
-
-    // In real application, use the room ID to connect to the server
+    noecho();
+    curs_set(0);
     mvwprintw(win, 20, 40, "Joining Room %s...", roomId.c_str());
     wrefresh(win);
     wattron(win, COLOR_PAIR(COLOR_YELLOW));
-    // Simulate joining the room with a short delay (for demonstration)
-    napms(1000);
+
+    // do the actual connection
+    clientId = receiveClientId(connfd);
+    sendUserName(connfd, clientId, username.c_str());
+    joinRoom(connfd, roomId.c_str());
 }
 
-void quickJoin(WINDOW* win) {
-    // Simulate joining a random room
+void quickJoin(WINDOW* win, std::string& roomId, int& connfd, int& clientId, std::string& username) {
     wattron(win, COLOR_PAIR(COLOR_YELLOW));
     mvwprintw(win, 18, 33, "Quick Joining to a Random Room...");
     wattron(win, COLOR_PAIR(COLOR_YELLOW));
     wrefresh(win);
-    // TBD: Implement quick join logic
-    napms(1000); // Simulation
+
+    // do the actual connection
+    clientId = receiveClientId(connfd);
+    sendUserName(connfd, clientId, username.c_str());
+    roomId = joinRoom(connfd, "-1");
 }
 
-void RoomMenu(WINDOW* win, GameState& state, std::string& roomId) {
+void RoomMenu(WINDOW* win, GameState& state, std::string& roomId, int& connfd, int& clientId, std::string& username) {
     setlocale(LC_ALL, "");
     keypad(win, TRUE);
-    nodelay(win, FALSE); // blocking mode
+    nodelay(win, TRUE); // non-blocking mode
 
     int maxY, maxX;
     getmaxyx(win, maxY, maxX);
@@ -391,19 +417,24 @@ void RoomMenu(WINDOW* win, GameState& state, std::string& roomId) {
     int optionStartX = (maxX - 40) / 2;
     int selectedOption = 0;
     while (true) {
-        for (int i = 0; i < numOptions; ++i) {
-            if (i == selectedOption) {
-                wattron(win, COLOR_PAIR(3) | A_REVERSE);
-            } else {
-                wattron(win, COLOR_PAIR(3));
-            }
-            mvwprintw(win, optionStartY + i, optionStartX, "%s", options[i]);
-            wattroff(win, COLOR_PAIR(3) | A_REVERSE);
-        }
-        wrefresh(win);
-
+        
         // Handle input
         int ch = wgetch(win);
+        if(ch != '\n'){
+            for (int i = 0; i < numOptions; ++i) {
+                if (i == selectedOption) {
+                    wattron(win, COLOR_PAIR(3) | A_REVERSE);
+                } else {
+                    wattron(win, COLOR_PAIR(3));
+                }
+                mvwprintw(win, optionStartY + i, optionStartX, "%s", options[i]);
+                wattroff(win, COLOR_PAIR(3) | A_REVERSE);
+            }
+        }else{
+            mvwprintw(win, optionStartY + 0, optionStartX, "                                        ");
+            mvwprintw(win, optionStartY + 1, optionStartX, "                                        ");
+            mvwprintw(win, optionStartY + 2, optionStartX, "                                        ");
+        }
         switch (ch) {
             case KEY_UP:
                 selectedOption = (selectedOption - 1 + numOptions) % numOptions;
@@ -414,19 +445,30 @@ void RoomMenu(WINDOW* win, GameState& state, std::string& roomId) {
             case '\n':  // Enter key
                 switch (selectedOption+1) {
                     case 1:  // Join a room by ID
-                        state = GameState::InRoom;
-                        mvwprintw(win, optionStartY + 0, optionStartX, "                                        ");
-                        mvwprintw(win, optionStartY + 1, optionStartX, "                                        ");
-                        mvwprintw(win, optionStartY + 2, optionStartX, "                                        ");
-                        joinRoomById(win, roomId);
+                        // connect to server
+                        if((connfd = connectToServer(SERV_IP, SERV_PORT)) == -1){
+                            werase(win);
+                            mvwprintw(win, optionStartY + 0, optionStartX, "Failed to connect to the server");
+                            wrefresh(win);
+                            napms(2000);
+                            return;
+                        }else{
+                            state = GameState::InRoom;
+                            joinRoomById(win, roomId, connfd, clientId, username);
+                        }
                         break;
-
                     case 2:  // Quick Join
-                        state = GameState::InRoom;
-                        mvwprintw(win, optionStartY + 0, optionStartX, "                                        ");
-                        mvwprintw(win, optionStartY + 1, optionStartX, "                                        ");
-                        mvwprintw(win, optionStartY + 2, optionStartX, "                                        ");
-                        quickJoin(win);
+                        // connect to server
+                        if((connfd = connectToServer(SERV_IP, SERV_PORT)) == -1){
+                            werase(win);
+                            mvwprintw(win, optionStartY + 0, optionStartX, "Failed to connect to the server");
+                            wrefresh(win);
+                            napms(2000);
+                            return;
+                        } else{
+                            state = GameState::InRoom;
+                            quickJoin(win, roomId, connfd, clientId, username);
+                        }
                         break;
 
                     case 3: // back to typing username
@@ -440,10 +482,10 @@ void RoomMenu(WINDOW* win, GameState& state, std::string& roomId) {
     }
 }
 
-void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId) {
+void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId, int& connfd) {
     setlocale(LC_ALL, "");
     keypad(win, TRUE);
-    nodelay(win, FALSE); // Blocking mode
+    nodelay(win, TRUE); // non-blocking mode
 
     int maxY, maxX;
     getmaxyx(win, maxY, maxX);
@@ -484,8 +526,8 @@ void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId)
 
     int numOptions = sizeof(options) / sizeof(options[0]);
     int optionStartY = roomMsgY + 3;
-    int optionStartX = (maxX - 12) / 2;
-    int selectedOption = 0;
+    int optionStartX = (maxX - strlen(options[0])) / 2;
+    int selectedOption = 1;
 
     while (true) {
         for (int i = 0; i < numOptions; ++i) {
@@ -498,7 +540,6 @@ void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId)
             wattroff(win, COLOR_PAIR(3) | A_REVERSE);
         }
         wrefresh(win);
-
         // Handle input
         int ch = wgetch(win);
         switch (ch) {
@@ -511,10 +552,12 @@ void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId)
             case '\n': // Enter key
                 if (isHost && selectedOption == 0) {
                     // Start Game logic (Host only)
+                    startGame(connfd, roomId.c_str());
                     state = GameState::GameLoop;
                     return;
                 } else if (selectedOption == 1 || !isHost) {
                     // Exit Room
+                    exitRoom(connfd, roomId.c_str());
                     state = GameState::RoomMenu;
                     return;
                 }
@@ -562,110 +605,78 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
     }
 
     // game loop
+    int lastKey = -1; // track the last key
     while (loopRunning) {
-        if(playerNum == 1 && myTank.getHP() > 0){
+        if (playerNum == 1 && myTank.getHP() > 0) {
             state = GameState::WinScreen;
             loopRunning = false;
             break;
-        }else if(myTank.getHP() <= 0){
+        } else if (myTank.getHP() <= 0) {
             state = GameState::LoseScreen;
             loopRunning = false;
             break;
         }
-        
         int ch = wgetch(gridWin);
-        switch (ch) {
-            case KEY_UP: {
-                myTank.setDirection(Direction::Up);
-                int nextY = myTank.getY() - 1;
-                if (nextY > 0 && !myTank.checkTankCollision(myTank.getX(), nextY, staticObjects)) {
-                    myTank.setY(nextY);
-                }
-                break;
-            }
-            case KEY_DOWN: {
-                myTank.setDirection(Direction::Down);
-                int nextY = myTank.getY() + 1;
-                if (nextY < gridHeight -1 && !myTank.checkTankCollision(myTank.getX(), nextY, staticObjects)) {
-                    myTank.setY(nextY);
-                }
-                break;
-            }
-            case KEY_LEFT: {
-                myTank.setDirection(Direction::Left);
-                int nextX = myTank.getX() - 1;
-                if (nextX > 0 && !myTank.checkTankCollision(nextX, myTank.getY(), staticObjects)) {
-                    myTank.setX(nextX);
-                }
-                break;
-            }
-            case KEY_RIGHT: {
-                myTank.setDirection(Direction::Right);
-                int nextX = myTank.getX() + 1;
-                if (nextX < gridWidth -1 && !myTank.checkTankCollision(nextX, myTank.getY(), staticObjects)) {
-                    myTank.setX(nextX);
-                }
-                break;
-            }
-            case ' ': {
-                myTank.fireBullet();
-                break;
-            }
+        if (ch != ERR) {lastKey = ch;}
 
-            case 'w': {
-                activeTanks[1].setDirection(Direction::Up);
-                int nextY = activeTanks[1].getY() - 1;
-                if (nextY > 0 && !activeTanks[1].checkTankCollision(activeTanks[1].getX(), nextY, staticObjects)) {
-                    activeTanks[1].setY(nextY);
-                }
-                break;
-            }
-            case 's': {
-                activeTanks[1].setDirection(Direction::Down);
-                int nextY = activeTanks[1].getY() + 1;
-                if (nextY < gridHeight -1 && !activeTanks[1].checkTankCollision(activeTanks[1].getX(), nextY, staticObjects)) {
-                    activeTanks[1].setY(nextY);
-                }
-                break;
-            }
-            case 'a': {
-                activeTanks[1].setDirection(Direction::Left);
-                int nextX = activeTanks[1].getX() - 1;
-                if (nextX > 0 && !activeTanks[1].checkTankCollision(nextX, activeTanks[1].getY(), staticObjects)) {
-                    activeTanks[1].setX(nextX);
-                }
-                break;
-            }
-            case 'd': {
-                activeTanks[1].setDirection(Direction::Right);
-                int nextX = activeTanks[1].getX() + 1;
-                if (nextX < gridWidth -1 && !activeTanks[1].checkTankCollision(nextX, activeTanks[1].getY(), staticObjects)) {
-                    activeTanks[1].setX(nextX);
-                }
-                break;
-            }
-            case 'f': {
-                activeTanks[1].fireBullet();
-                break;
-            }
-            case 'q': {
-                state = GameState::TieScreen;
-                loopRunning = false;
-                break;
-            }
-        }
-        // TBD: Check for collision between bullets and tanks
-        // TBD: Remote tanks movement retrieval
         if (timer.shouldUpdate()) {
+            switch (lastKey) {
+                case ' ': {
+                    myTank.fireBullet();
+                    break;
+                }
+                case 'w': {
+                    myTank.setDirection(Direction::Up);
+                    int nextY = myTank.getY() - 1;
+                    if (nextY > 0 && !myTank.checkTankCollision(myTank.getX(), nextY, staticObjects)) {
+                        myTank.setY(nextY);
+                    }
+                    break;
+                }
+                case 's': {
+                    myTank.setDirection(Direction::Down);
+                    int nextY = myTank.getY() + 1;
+                    if (nextY < gridHeight - 1 && !myTank.checkTankCollision(myTank.getX(), nextY, staticObjects)) {
+                        myTank.setY(nextY);
+                    }
+                    break;
+                }
+                case 'a': {
+                    myTank.setDirection(Direction::Left);
+                    int nextX = myTank.getX() - 1;
+                    if (nextX > 0 && !myTank.checkTankCollision(nextX, myTank.getY(), staticObjects)) {
+                        myTank.setX(nextX);
+                    }
+                    break;
+                }
+                case 'd': {
+                    myTank.setDirection(Direction::Right);
+                    int nextX = myTank.getX() + 1;
+                    if (nextX < gridWidth - 1 && !myTank.checkTankCollision(nextX, myTank.getY(), staticObjects)) {
+                        myTank.setX(nextX);
+                    }
+                    break;
+                }
+                case 'q': {
+                    state = GameState::TieScreen;
+                    loopRunning = false;
+                    break;
+                }
+            }
+            lastKey = -1;   // Reset last key
+
+            // TBD: Check for collision between bullets and tanks
+            // TBD: Remote tanks movement retrieval
+            // Render updates
             werase(gridWin);
             renderStaticObjects(gridWin, staticObjects);
             setlocale(LC_ALL, "");
             drawCustomBorder(gridWin);
 
-            for(int i = 0; i < playerNum; i++){
-                if(activeTanks[i].getHP() > 0){
+            for (int i = 0; i < playerNum; i++) {
+                if (activeTanks[i].getHP() > 0) {
                     activeTanks[i].updateBullets(gridWidth, gridHeight, staticObjects);
-                    handleBulletCollisions(activeTanks);// TBD: server side
+                    handleBulletCollisions(activeTanks); // TBD: server side
                     checkBulletTankCollisions(activeTanks); // TBD: server side
                     renderTank(gridWin, activeTanks[i]);
                 }
@@ -675,6 +686,7 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
             wrefresh(gridWin);
         }
     }
+
     // Cleanup
     for(int i = 0; i < playerNum; i++){
         werase(StatusWin[i]);
@@ -847,6 +859,9 @@ int main() {
     GameState state;
     std::string username="";
     std::string roomId="";
+    int connfd = -1;
+    int clientId = -1;
+    suppress_stderr();
     initGame(width, height, titleWin, inputWin, roomWin, gameWin, endWin, state);
 
     bool running = true;
@@ -865,18 +880,18 @@ int main() {
             }
 
             case GameState::RoomMenu: {
-                RoomMenu(roomWin, state, roomId);
+                RoomMenu(roomWin, state, roomId, connfd, clientId, username);
                 break;
             }
 
             case GameState::InRoom: {
-                InRoomMenu(roomWin, state, true, roomId);
+                InRoomMenu(roomWin, state, true, roomId, connfd);
                 break;
             }
 
             case GameState::GameLoop: {
                 // TBD: Generate static objects
-                std::vector<MapObject> staticObjects = generateStaticObjects(width, height, 400, 400);
+                std::vector<MapObject> staticObjects = generateMap(width, height, 3213123131);
                 // TBD: get other players info from server (PlayerNames)
                 gameLoop(gameWin, width, height, staticObjects, state, username, playerNum, PlayerNames);
                 break;
