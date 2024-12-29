@@ -84,6 +84,7 @@ public:
     int getY() const { return y; }
     MapObjectType getType() const { return type; }
     bool isBlocking() const {return type == MapObjectType::wall;}
+    bool isWater() const {return type == MapObjectType::water;}
     bool isObstacle() const {return (type == MapObjectType::water || type == MapObjectType::wall);}
     std::wstring getSymbol() const {
         switch (type) {
@@ -99,9 +100,10 @@ class Bullet : public GameObject {
 private:
     Direction direction;
     bool active;
+    bool inWater;
 
 public:
-    Bullet(int x, int y, Direction dir) : GameObject(x, y, MapObjectType :: bullet), direction(dir), active(true){}
+    Bullet(int x, int y, Direction dir) : GameObject(x, y, MapObjectType :: bullet), direction(dir), active(true),inWater(false){}
 
     static bool checkCollision(int x, int y, const std::vector<MapObject>& staticObjects) {
         for (const auto& obj : staticObjects) {
@@ -111,7 +113,18 @@ public:
         }
         return false;
     }
+
+    static bool checkInWater(int x, int y, const std::vector<MapObject>& staticObjects) {
+        for (const auto& obj : staticObjects) {
+            if (obj.isWater() && obj.getX() == x && obj.getY() == y) {
+                return true;
+            }
+        }
+        return false;
+    }
     
+    bool getInWater() const {return inWater;}
+
     bool checkCollisionWithBullet(const Bullet& other) const {
         return active && other.isActive() && x == other.getX() && y == other.getY();
     }
@@ -135,6 +148,11 @@ public:
             checkCollision(nextX, nextY, staticObjects)) {
             active = false;
         } else {
+            if(checkInWater(nextX, nextY, staticObjects)){
+                inWater = true;
+            }else{
+                inWater = false;
+            }
             x = nextX;
             y = nextY;
         }
