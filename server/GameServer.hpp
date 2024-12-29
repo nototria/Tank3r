@@ -3,8 +3,10 @@
 #include"ClientManager.hpp"
 #include"RoomManager.hpp"
 #include"../shared/GameParameters.h"
+#include"../shared/InputStruct.hpp"
 #include<poll.h>
 #include<sstream>
+#include<pthread.h>
 class GameServer{
 private:
     char recv_buffer[1024], send_buffer[1024];
@@ -47,6 +49,6 @@ public:
     GameServer(const int&);
     inline bool is_full() const;
 
-    void listen();
+    void tcp_listen();
 };
 #endif

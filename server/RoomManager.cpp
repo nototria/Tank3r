@@ -38,6 +38,7 @@ bool RoomManager::join_room(const int client_id, int &room_id){
         //try to enter a room that already has some player
         //then try to enter a empty room
         //otherwise, no room is available
+        srand(time(0));
         if(!wait_rooms.empty()) room_id=wait_rooms[random()%wait_rooms.size()];
         else if(!empty_rooms.empty()) room_id=empty_rooms[random()%empty_rooms.size()];
         else return false;
@@ -82,7 +83,6 @@ bool RoomManager::exit_room(const int client_id, const int room_id){
 void RoomManager::start_game(const int room_id){
     auto &room_obj=this->room_data_list[room_id];
     room_obj.state=RoomData::play;
-    //TODO : create threads to simulate the game and listen to UDP message
 }
 
 int RoomManager::get_host_id(const int room_id){

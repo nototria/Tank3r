@@ -24,7 +24,7 @@ signed main(){
     listen(listen_fd,1024);
     
     GameServer server(listen_fd);
-    server.listen();
+    server.tcp_listen();
 
     return 0;
 }

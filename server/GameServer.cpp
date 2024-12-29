@@ -100,6 +100,8 @@ void GameServer::start_game(const int room_id){
         snprintf(send_buffer+str_idx,1024-str_idx,"%s,%s\n",id2str(client_id),user_name.c_str());
         str_idx+=(6+user_name.size());
     }
+    srand(time(0));
+    snprintf(send_buffer+str_idx,1024-str_idx,"seed,%lu\n",(unsigned long)random());
     for(const auto &client_id:room_mgr.get_clients(room_id)){
         write(pollfd_list[client_id].fd,send_buffer,str_idx);
     }
@@ -174,8 +176,8 @@ void GameServer::process_commands(const int idx){
     }
 }
 
-void GameServer::listen(){
-    std::cout<<"call listen"<<std::endl;
+void GameServer::tcp_listen(){
+    std::cout<<"call tcp_listen"<<std::endl;
     while(true){
         int poll_result=poll(this->pollfd_list,1+MAX_CLIENTS,-1);
         std::cout<<"poll"<<std::endl;
