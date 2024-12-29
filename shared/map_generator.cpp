@@ -10,7 +10,7 @@
 #include "GameObject.h"
 
 void connectCorners(std::vector<std::vector<char>>& mapGrid, int width, int height);
-void placeDenseClusters(std::vector<std::vector<char>>& mapGrid, int width, int height);
+void placeDenseClusters(std::vector<std::vector<char>>& mapGrid, int width, int height, int maxClusters, int minClusterSize, int maxClusterSize);
 void connectRandomPoints(std::vector<std::vector<char>>& mapGrid, int x1, int y1, int x2, int y2, int corridorWidth);
 void drawWaterBorder(std::vector<std::vector<char>>& mapGrid, int width, int height, int excludeAreaSize);
 void cleanLonelyObjects(std::vector<std::vector<char>>& mapGrid, int width, int height, int minClusterSize);
@@ -22,7 +22,8 @@ std::vector<MapObject> generateMap(int width, int height, unsigned seed) {
     std::srand(seed);
     std::vector<std::vector<char>> mapGrid(width, std::vector<char>(height, ' '));
 
-    placeDenseClusters(mapGrid, width, height);
+    // TBD: need to discuss the parameters
+    placeDenseClusters(mapGrid, width, height, 200, 10, 50); 
 
     // draw random road
     for(int i=0 ;i<std::rand()%10+5; i++){
@@ -167,11 +168,9 @@ void connectRandomPoints(std::vector<std::vector<char>>& mapGrid, int x1, int y1
     }
 }
 
-void placeDenseClusters(std::vector<std::vector<char>>& mapGrid, int width, int height) {
-    int maxClusters = 400 + std::rand() % 200;  // Reduced cluster count
-    int minClusterSize = 1;                 
-    int maxClusterSize = 100;                // Smaller cluster sizes
-
+void placeDenseClusters(std::vector<std::vector<char>>& mapGrid, int width, int height, int maxClusters, int minClusterSize, int maxClusterSize) {
+    maxClusters = maxClusters + std::rand() % maxClusters;
+    
     for (int i = 0; i < maxClusters; ++i) {
         char clusterType = (std::rand() % 2 == 0) ? 'W' : 'A';
 
