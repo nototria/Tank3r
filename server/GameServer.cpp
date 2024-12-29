@@ -251,6 +251,7 @@ void* GameServer::udp_listen(void *obj_ptr){
             pthread_mutex_unlock(self.input_buffer_mutex+tmp.client_id);
         }
     }
+    return NULL;
 }
 
 void GameServer::start_server(){
@@ -264,5 +265,5 @@ void *GameServer::game_loop(void *obj_ptr){
     auto &self=*((StartParam*)obj_ptr)->obj_ptr;
     int room_id=((StartParam*)obj_ptr)->room_id;
     delete (StartParam*)obj_ptr;
-    
+    return NULL;
 }
