@@ -61,6 +61,7 @@ private:
     
     void tcp_listen();
     static void* udp_listen(void *obj_ptr);
+    static void* game_loop(void *obj_ptr);
 public:
     struct pollfd pollfd_list[1+MAX_CLIENTS];
     GameServer(const int& server_fd, const int& udp_fd);

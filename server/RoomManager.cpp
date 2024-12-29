@@ -80,20 +80,30 @@ bool RoomManager::exit_room(const int client_id, const int room_id){
     return 0;
 }
 
+void RoomManager::set_map_seed(const int room_id, const unsigned long seed){
+    auto &room_obj=this->room_data_list[room_id];
+    room_obj.map_seed=seed;
+}
+
+const unsigned long RoomManager::get_map_seed(const int room_id) const{
+    auto &room_obj=this->room_data_list[room_id];
+    return room_obj.map_seed;
+}
+
 void RoomManager::start_game(const int room_id){
     auto &room_obj=this->room_data_list[room_id];
     room_obj.state=RoomData::play;
 }
 
-int RoomManager::get_host_id(const int room_id){
+int RoomManager::get_host_id(const int room_id) const{
     return room_data_list[room_id].host_id;
 }
 
-int RoomManager::player_count(const int room_id){
+int RoomManager::player_count(const int room_id) const{
     return room_data_list[room_id].player_count();
 }
 
-const std::set<int>& RoomManager::get_clients(const int room_id){
+const std::set<int>& RoomManager::get_clients(const int room_id) const{
     return room_data_list[room_id].client_id_set;
 }
 

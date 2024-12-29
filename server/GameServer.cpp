@@ -6,6 +6,13 @@
 #include<netinet/in.h>
 #include<unistd.h>
 #include"../shared/GameUtils.hpp"
+#include"../shared/GameObject.h"
+struct StartParam{
+    GameServer *obj_ptr;
+    int room_id;
+    StartParam(GameServer *_obj_ptr, const int _room_id): obj_ptr(_obj_ptr), room_id(_room_id){}
+};
+
 GameServer::GameServer(const int &server_fd, const int &udp_fd){
     this->client_count=0;
     //init pollfd list
@@ -112,7 +119,8 @@ void GameServer::start_game(const int room_id){
         str_idx+=(6+user_name.size());
     }
     srand(time(0));
-    snprintf(send_buffer+str_idx,1024-str_idx,"seed,%lu\n",(unsigned long)random());
+    room_mgr.set_map_seed(room_id,(unsigned long)random());
+    snprintf(send_buffer+str_idx,1024-str_idx,"seed,%lu\n",room_mgr.get_map_seed(room_id));
     for(const auto &client_id:room_mgr.get_clients(room_id)){
         write(pollfd_list[client_id].fd,send_buffer,strlen(send_buffer));
     }
@@ -121,7 +129,10 @@ void GameServer::start_game(const int room_id){
     for(const auto &client_id:room_mgr.get_clients(room_id)){
         cli_mgr.start_game(client_id);
     }
-    
+
+    auto *ptr=new StartParam(this,room_id);
+    pthread_t tid;
+    pthread_create(&tid,NULL,GameServer::game_loop,(void*)ptr);
 }
 
 void GameServer::recv_connection(){
@@ -225,7 +236,9 @@ void* GameServer::udp_listen(void *obj_ptr){
             std::cerr<<"recvfrom error"<<std::endl;
             exit(1);
         }
+        if(self.udp_recv_buffer[n]=='\n') self.udp_recv_buffer[n]='\0';//test
 
+        std::cout<<"udp recv: {"<<self.udp_recv_buffer<<"}"<<std::endl;
         InputStruct tmp(self.udp_recv_buffer);
         
         if(tmp.valid && self.cli_mgr.get_state(tmp.client_id)==ClientData::play){
@@ -244,5 +257,12 @@ void GameServer::start_server(){
     pthread_t tid;
     pthread_create(&tid,NULL,GameServer::udp_listen,(void*)this);
     this->tcp_listen();
+}
 
+void *GameServer::game_loop(void *obj_ptr){
+    pthread_detach(pthread_self());
+    auto &self=*((StartParam*)obj_ptr)->obj_ptr;
+    int room_id=((StartParam*)obj_ptr)->room_id;
+    delete (StartParam*)obj_ptr;
+    
 }

@@ -38,8 +38,8 @@ signed main(){
         return 1;
     }
     
-    GameServer server(listen_fd,udp_fd);
-    server.start_server();
+    GameServer *server=new GameServer(listen_fd,udp_fd);
+    server->start_server();
 
     return 0;
 }
