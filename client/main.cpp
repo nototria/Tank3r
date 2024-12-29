@@ -85,6 +85,13 @@ void initGame(int& width, int& height, WINDOW*& titleWin, WINDOW*& inputWin, WIN
     init_pair(5, COLOR_MAGENTA, COLOR_BLACK);
     init_pair(6, COLOR_CYAN, COLOR_BLACK);
     init_pair(7, COLOR_WHITE, COLOR_BLACK);
+    init_pair(11, COLOR_RED, COLOR_CYAN);
+    init_pair(12, COLOR_GREEN, COLOR_CYAN);
+    init_pair(13, COLOR_YELLOW, COLOR_CYAN);
+    init_pair(14, COLOR_BLUE, COLOR_CYAN);
+    init_pair(15, COLOR_MAGENTA, COLOR_CYAN);
+    init_pair(16, COLOR_CYAN, COLOR_CYAN);
+    init_pair(17, COLOR_WHITE, COLOR_CYAN);
 
     width = 100;
     height = 40;
@@ -112,10 +119,18 @@ void renderTank(WINDOW* win, Tank& tank) {
 
     wattron(win, COLOR_PAIR(color)); 
     mvwadd_wch(win, y, x, &cc); //tank body
-    for (const auto& bullet : tank.getBullets()) { // bullets
-        mvwaddch(win, bullet.getY(), bullet.getX(), bullet.getSymbol());
-    }
     wattroff(win, COLOR_PAIR(color));
+    for (const auto& bullet : tank.getBullets()) { // bullets
+        if (bullet.getInWater()) {
+            wattron(win, COLOR_PAIR(color+10));
+            mvwaddch(win, bullet.getY(), bullet.getX(), bullet.getSymbol());
+            wattroff(win, COLOR_PAIR(color+10));
+        } else {
+            wattron(win, COLOR_PAIR(color));
+            mvwaddch(win, bullet.getY(), bullet.getX(), bullet.getSymbol());
+            wattroff(win, COLOR_PAIR(color));
+        }
+    }
 }
 
 void renderStaticObjects(WINDOW* win, const std::vector<MapObject>& objects) {
@@ -564,7 +579,7 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
     keypad(gridWin, TRUE);
     nodelay(gridWin, TRUE);
     drawCustomBorder(gridWin);
-    GameTimer timer(0.064); // 15 FPS
+    GameTimer timer(0.128); // 7.5 FPS
     bool loopRunning = true;
 
     //remote tanks simulation
@@ -585,73 +600,78 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
     }
 
     // game loop
+    int lastKey = -1; // track the last key
     while (loopRunning) {
-        if(playerNum == 1 && myTank.getHP() > 0){
+        if (playerNum == 1 && myTank.getHP() > 0) {
             state = GameState::WinScreen;
             loopRunning = false;
             break;
-        }else if(myTank.getHP() <= 0){
+        } else if (myTank.getHP() <= 0) {
             state = GameState::LoseScreen;
             loopRunning = false;
             break;
         }
-
         int ch = wgetch(gridWin);
-        switch (ch) {
-            case ' ': {
-                myTank.fireBullet();
-                break;
-            }
-            case 'w': {
-                myTank.setDirection(Direction::Up);
-                int nextY = myTank.getY() - 1;
-                if (nextY > 0 && !myTank.checkTankCollision(myTank.getX(), nextY, staticObjects)) {
-                    myTank.setY(nextY);
-                }
-                break;
-            }
-            case 's': {
-                myTank.setDirection(Direction::Down);
-                int nextY = myTank.getY() + 1;
-                if (nextY < gridHeight -1 && !myTank.checkTankCollision(myTank.getX(), nextY, staticObjects)) {
-                    myTank.setY(nextY);
-                }
-                break;
-            }
-            case 'a': {
-                myTank.setDirection(Direction::Left);
-                int nextX = myTank.getX() - 1;
-                if (nextX > 0 && !myTank.checkTankCollision(nextX, myTank.getY(), staticObjects)) {
-                    myTank.setX(nextX);
-                }
-                break;
-            }
-            case 'd': {
-                myTank.setDirection(Direction::Right);
-                int nextX = myTank.getX() + 1;
-                if (nextX < gridWidth -1 && !myTank.checkTankCollision(nextX, myTank.getY(), staticObjects)) {
-                    myTank.setX(nextX);
-                }
-                break;
-            }
-            case 'q': {
-                state = GameState::TieScreen;
-                loopRunning = false;
-                break;
-            }
-        }
-        // TBD: Check for collision between bullets and tanks
-        // TBD: Remote tanks movement retrieval
+        if (ch != ERR) {lastKey = ch;}
+
         if (timer.shouldUpdate()) {
+            switch (lastKey) {
+                case ' ': {
+                    myTank.fireBullet();
+                    break;
+                }
+                case 'w': {
+                    myTank.setDirection(Direction::Up);
+                    int nextY = myTank.getY() - 1;
+                    if (nextY > 0 && !myTank.checkTankCollision(myTank.getX(), nextY, staticObjects)) {
+                        myTank.setY(nextY);
+                    }
+                    break;
+                }
+                case 's': {
+                    myTank.setDirection(Direction::Down);
+                    int nextY = myTank.getY() + 1;
+                    if (nextY < gridHeight - 1 && !myTank.checkTankCollision(myTank.getX(), nextY, staticObjects)) {
+                        myTank.setY(nextY);
+                    }
+                    break;
+                }
+                case 'a': {
+                    myTank.setDirection(Direction::Left);
+                    int nextX = myTank.getX() - 1;
+                    if (nextX > 0 && !myTank.checkTankCollision(nextX, myTank.getY(), staticObjects)) {
+                        myTank.setX(nextX);
+                    }
+                    break;
+                }
+                case 'd': {
+                    myTank.setDirection(Direction::Right);
+                    int nextX = myTank.getX() + 1;
+                    if (nextX < gridWidth - 1 && !myTank.checkTankCollision(nextX, myTank.getY(), staticObjects)) {
+                        myTank.setX(nextX);
+                    }
+                    break;
+                }
+                case 'q': {
+                    state = GameState::TieScreen;
+                    loopRunning = false;
+                    break;
+                }
+            }
+            lastKey = -1;   // Reset last key
+
+            // TBD: Check for collision between bullets and tanks
+            // TBD: Remote tanks movement retrieval
+            // Render updates
             werase(gridWin);
             renderStaticObjects(gridWin, staticObjects);
             setlocale(LC_ALL, "");
             drawCustomBorder(gridWin);
 
-            for(int i = 0; i < playerNum; i++){
-                if(activeTanks[i].getHP() > 0){
+            for (int i = 0; i < playerNum; i++) {
+                if (activeTanks[i].getHP() > 0) {
                     activeTanks[i].updateBullets(gridWidth, gridHeight, staticObjects);
-                    handleBulletCollisions(activeTanks);// TBD: server side
+                    handleBulletCollisions(activeTanks); // TBD: server side
                     checkBulletTankCollisions(activeTanks); // TBD: server side
                     renderTank(gridWin, activeTanks[i]);
                 }
@@ -659,9 +679,9 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
                 wrefresh(StatusWin[i]);
             }
             wrefresh(gridWin);
-            
         }
     }
+
     // Cleanup
     for(int i = 0; i < playerNum; i++){
         werase(StatusWin[i]);
