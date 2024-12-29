@@ -1,5 +1,15 @@
 # Server
-### connection
+### threads and var scope
+- tcp listen(thread 0)
+listen to tcp message
+- udp listen(thread 1)
+listen to udp message
+access to ```client_inputs```
+- game simulation(thread *)
+taking game input and send entity updates
+access to ```client_inputs```
+---
+### tcp messages
 1. client connect to server with tcp\
 if server is full, **server** closes the connection\
 else **server** sends ```client_id``` to the **client**\
@@ -18,7 +28,7 @@ and set the **client** state to ```wait_name```
 6. host can send ```"start,room_id\n"``` to start the game
 7. server send ```"start,player_count\nclient_id,user_name\n...seed,seed_number\n"``` to every client
 
-### game start
+### udp messages
 ```obj_id``` : 4-digit number
 ```type``` : bullet, tank
 ```direction``` : 0, 1, 2, 3
@@ -35,4 +45,4 @@ and set the **client** state to ```wait_name```
 ```"h,obj_id,health"```
 #### client send
 - input
-```"key,client_id"```
+```"key,client_id,seq_number"```
