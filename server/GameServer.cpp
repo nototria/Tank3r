@@ -6,12 +6,23 @@
 #include<netinet/in.h>
 #include<unistd.h>
 #include"../shared/GameUtils.hpp"
-GameServer::GameServer(const int &server_fd){
+GameServer::GameServer(const int &server_fd, const int &udp_fd){
     this->client_count=0;
     //init pollfd list
     this->pollfd_list[MAX_CLIENTS].fd=server_fd;
     this->pollfd_list[MAX_CLIENTS].events=POLLRDNORM;
     for(int i=0;i<MAX_CLIENTS;++i) this->pollfd_list[i].fd=-1;
+
+    //udp_sock_fd
+    this->udp_sock_fd=udp_fd;
+
+    //init mutex
+    cli_mgr_mutex=PTHREAD_MUTEX_INITIALIZER;
+    room_mgr_mutex=PTHREAD_MUTEX_INITIALIZER;
+    for(int i=0;i<MAX_CLIENTS;++i){
+        input_buffer_mutex[i]=PTHREAD_MUTEX_INITIALIZER;
+        client_udp_addr_mutex[i]=PTHREAD_MUTEX_INITIALIZER;
+    }
 }
 
 inline bool GameServer::is_full() const{
@@ -105,6 +116,12 @@ void GameServer::start_game(const int room_id){
     for(const auto &client_id:room_mgr.get_clients(room_id)){
         write(pollfd_list[client_id].fd,send_buffer,strlen(send_buffer));
     }
+
+    room_mgr.start_game(room_id);
+    for(const auto &client_id:room_mgr.get_clients(room_id)){
+        cli_mgr.start_game(client_id);
+    }
+    
 }
 
 void GameServer::recv_connection(){
@@ -193,6 +210,39 @@ void GameServer::tcp_listen(){
     }
 }
 
-void GameServer::udp_listen(){
-    
+void* GameServer::udp_listen(void *obj_ptr){
+    std::cout<<"call udp_listen"<<std::endl;
+    pthread_detach(pthread_self());
+
+    auto &self=*(GameServer*)obj_ptr;
+    struct sockaddr_in udp_addr;
+    socklen_t len;
+
+    while(true){
+        len=sizeof(udp_addr);
+        int n=recvfrom(self.udp_sock_fd,self.udp_recv_buffer,1024,0,(struct sockaddr*)&udp_addr,&len);
+        if(n<0){
+            std::cerr<<"recvfrom error"<<std::endl;
+            exit(1);
+        }
+
+        InputStruct tmp(self.udp_recv_buffer);
+        
+        if(tmp.valid && self.cli_mgr.get_state(tmp.client_id)==ClientData::play){
+            pthread_mutex_lock(self.client_udp_addr_mutex+tmp.client_id);
+            self.client_udp_addr[tmp.client_id]=udp_addr;//neet mutex
+            pthread_mutex_unlock(self.client_udp_addr_mutex+tmp.client_id);
+
+            pthread_mutex_lock(self.input_buffer_mutex+tmp.client_id);
+            self.input_buffer[tmp.client_id].push(tmp);//need mutex
+            pthread_mutex_unlock(self.input_buffer_mutex+tmp.client_id);
+        }
+    }
+}
+
+void GameServer::start_server(){
+    pthread_t tid;
+    pthread_create(&tid,NULL,GameServer::udp_listen,(void*)this);
+    this->tcp_listen();
+
 }

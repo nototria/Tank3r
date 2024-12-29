@@ -11,17 +11,22 @@
 #include<netinet/in.h>
 class GameServer{
 private:
-    char recv_buffer[1024], send_buffer[1024];
+    char recv_buffer[1024], send_buffer[1024], udp_recv_buffer[1024];
+    std::stringstream client_buffer[MAX_CLIENTS];//access by tcp_listen
+    
     int client_count;
     ClientManager cli_mgr;  //access by tcp_listen, game_thread
+    pthread_mutex_t cli_mgr_mutex;
+    
     RoomManager room_mgr;   //access by tcp_listen, game_thread
-    std::stringstream client_buffer[MAX_CLIENTS];//access by tcp_listen
+    pthread_mutex_t room_mgr_mutex;
 
+    int udp_sock_fd;
     std::queue<InputStruct> input_buffer[MAX_CLIENTS];//access by udp_listen, game_thread
-    pthread_mutex_t input_buffer_lock[MAX_CLIENTS];
+    pthread_mutex_t input_buffer_mutex[MAX_CLIENTS];
 
     struct sockaddr_in client_udp_addr[MAX_CLIENTS];//access by udp_listen, game_thread
-    pthread_mutex_t client_udp_addr_lock[MAX_CLIENTS];
+    pthread_mutex_t client_udp_addr_mutex[MAX_CLIENTS];
 
     void recv_commands();
     void recv_connection();
@@ -53,12 +58,21 @@ private:
     void exit_room(const int client_id);
 
     void start_game(const int room_id);
+    
+    void tcp_listen();
+    static void* udp_listen(void *obj_ptr);
 public:
     struct pollfd pollfd_list[1+MAX_CLIENTS];
-    GameServer(const int&);
+    GameServer(const int& server_fd, const int& udp_fd);
     inline bool is_full() const;
 
-    void tcp_listen();
-    void udp_listen();
+    void start_server();
 };
 #endif
+/*
+Heap-dynamic data       | Stack-dynamic data
+(thread-specific data)  | (no special treatment)
+--------------------------------------------------
+Static Data             | 
+(used with mutex)       | 
+*/
