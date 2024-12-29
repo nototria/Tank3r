@@ -91,7 +91,18 @@ void GameServer::exit_room(const int idx){
 }
 
 void GameServer::start_game(const int room_id){
-
+    //generate message
+    //start,player_count\nclient_id,user_name\nclient_id,user_name\n...
+    snprintf(send_buffer,1024,"start,%d\n",room_mgr.player_count(room_id));
+    int str_idx=strlen(send_buffer);
+    for(const auto &client_id:room_mgr.get_clients(room_id)){
+        const auto &user_name=cli_mgr.get_user_name(client_id);
+        snprintf(send_buffer+str_idx,1024-str_idx,"%s,%s\n",id2str(client_id),user_name.c_str());
+        str_idx+=(6+user_name.size());
+    }
+    for(const auto &client_id:room_mgr.get_clients(room_id)){
+        write(pollfd_list[client_id].fd,send_buffer,str_idx);
+    }
 }
 
 void GameServer::recv_connection(){
