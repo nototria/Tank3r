@@ -175,12 +175,12 @@ public:
 
     static std::vector<Tank> createTanks(int playerNum, const std::string remotePlayerNames[], int gridWidth, int gridHeight) {
         std::vector<Tank> tanks;
-        int startX = gridWidth / 2;
-        int startY = gridHeight / 2;
+        std::vector<std::pair<int, int>> corners = {
+        {1, 1}, {1, gridHeight - 2}, {gridWidth - 2, gridHeight - 2}, {gridWidth - 2, 1}};
 
         for (int i = 0; i < playerNum; ++i) {
             // Use player name from remotePlayerNames and create a tank for each player
-            tanks.emplace_back(startX + (i * 2), startY + (i * 2), Direction::Right, COLOR_BLUE, 20, remotePlayerNames[i]);
+            tanks.emplace_back(corners[i].first, corners[i].second, Direction::Down, COLOR_BLUE, 20, remotePlayerNames[i]);
         }
 
         return tanks;
