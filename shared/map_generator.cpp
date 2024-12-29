@@ -12,25 +12,19 @@
 void connectCorners(std::vector<std::vector<char>>& mapGrid, int width, int height);
 void placeDenseClusters(std::vector<std::vector<char>>& mapGrid, int width, int height);
 void connectRandomPoints(std::vector<std::vector<char>>& mapGrid, int x1, int y1, int x2, int y2, int corridorWidth);
-void fixupNotches(std::vector<std::vector<char>>& mapGrid, int width, int height, int corridorWidth);
 void drawWaterBorder(std::vector<std::vector<char>>& mapGrid, int width, int height, int excludeAreaSize);
 void cleanLonelyObjects(std::vector<std::vector<char>>& mapGrid, int width, int height, int minClusterSize);
+void fillHolesWithWalls(std::vector<std::vector<char>>& mapGrid, int width, int height);
 
 std::vector<MapObject> generateMap(int width, int height, unsigned seed) {
     std::vector<MapObject> mapObjects;
     std::srand(seed);
-
-    // Initialize the map grid with empty spaces
     std::vector<std::vector<char>> mapGrid(width, std::vector<char>(height, ' '));
 
-    // Place dense clusters of walls and water
     placeDenseClusters(mapGrid, width, height);
-
-    // Ensure the four corners of the map are connected
-    connectCorners(mapGrid, width, height);
-
+    
     // draw random road
-    for(int i=0 ;i<std::rand()%10+20; i++){
+    for(int i=0 ;i<std::rand()%10+5; i++){
         int x1 = std::rand() % width;
         int y1 = std::rand() % height;
         int x2 = std::rand() % width;
@@ -38,14 +32,10 @@ std::vector<MapObject> generateMap(int width, int height, unsigned seed) {
         connectRandomPoints(mapGrid, x1, y1, x2, y2, 3);
     }
 
-    // Fix up notches in the map
-    fixupNotches(mapGrid, width, height, 3);
-
-    // draw water border
+    connectCorners(mapGrid, width, height);
     drawWaterBorder(mapGrid, width, height, 3);
-
-    // Fix isolated water and wall objects
-    cleanLonelyObjects(mapGrid, width, height, 2);
+    cleanLonelyObjects(mapGrid, width, height, 3);
+    fillHolesWithWalls(mapGrid, width, height);
 
     // Convert mapGrid to mapObjects
     for (int x = 0; x < width; ++x) {
@@ -61,155 +51,29 @@ std::vector<MapObject> generateMap(int width, int height, unsigned seed) {
     return mapObjects;
 }
 
-void fixupNotches(std::vector<std::vector<char>>& mapGrid, int width, int height, int corridorWidth) {
-    // Helper to check if a tile is a wall or border
-    auto isWallOrBorder = [&](int x, int y) {
-        return x < 1 || x >= width - 1 || y < 1 || y >= height - 1 || mapGrid[x][y] == 'W';
-    };
-
-    // Helper to detect if a space is a notch
-    auto isNotch = [&](int x, int y) {
-        if (mapGrid[x][y] != ' ') return false; // Only consider empty spaces
-
-        // Count surrounding walls or borders
-        int wallCount = 0;
-        for (int dx = -1; dx <= 1; ++dx) {
-            for (int dy = -1; dy <= 1; ++dy) {
-                if (dx == 0 && dy == 0) continue; // Skip the current tile
-                if (isWallOrBorder(x + dx, y + dy)) {
-                    ++wallCount;
-                }
-            }
-        }
-        return wallCount >= 6; // Consider it a notch if most of the surrounding tiles are walls or borders
-    };
-
-    // DFS to check depth of notch area
-    auto dfs = [&](int startX, int startY, std::vector<std::vector<bool>>& visited) -> int {
-        int depth = 0;
-        std::stack<std::pair<int, int>> stack;
-        stack.push({startX, startY});
-        visited[startX][startY] = true;
-
-        while (!stack.empty()) {
-            auto [x, y] = stack.top();
-            stack.pop();
-            ++depth;
-
-            for (int dx = -1; dx <= 1; ++dx) {
-                for (int dy = -1; dy <= 1; ++dy) {
-                    int nx = x + dx;
-                    int ny = y + dy;
-                    if (nx >= 1 && nx < width - 1 && ny >= 1 && ny < height - 1 && !visited[nx][ny] && mapGrid[nx][ny] == ' ') {
-                        visited[nx][ny] = true;
-                        stack.push({nx, ny});
-                    }
-                }
-            }
-        }
-        return depth;
-    };
-
-    // Helper to fill the notch with nearby blocks
-    auto fillNotch = [&](int x, int y) {
-        std::map<char, int> nearbyCounts;
-        for (int dx = -1; dx <= 1; ++dx) {
-            for (int dy = -1; dy <= 1; ++dy) {
-                if (dx == 0 && dy == 0) continue;
-                char tile = mapGrid[x + dx][y + dy];
-                if (tile != ' ') ++nearbyCounts[tile];
-            }
-        }
-
-        // Choose the most common type
-        char fillType = 'W'; // Default to wall
-        int maxCount = 0;
-        for (const auto& [type, count] : nearbyCounts) {
-            if (count > maxCount) {
-                maxCount = count;
-                fillType = type;
-            }
-        }
-
-        // Fill the notch (but not the borders)
-        if (!isWallOrBorder(x, y)) {
-            mapGrid[x][y] = fillType;
-        }
-    };
-
-    // Helper to connect the notch to the road
-    auto connectToRoad = [&](int x, int y) {
-        // BFS to find nearest open area and connect to it
-        std::queue<std::pair<int, int>> queue;
-        std::vector<std::vector<bool>> visited(width, std::vector<bool>(height, false));
-        queue.push({x, y});
-        visited[x][y] = true;
-
-        while (!queue.empty()) {
-            auto [cx, cy] = queue.front();
-            queue.pop();
-
-            for (int dx = -1; dx <= 1; ++dx) {
-                for (int dy = -1; dy <= 1; ++dy) {
-                    int nx = cx + dx;
-                    int ny = cy + dy;
-
-                    if (nx < 1 || nx >= width - 1 || ny < 1 || ny >= height - 1) continue; // Skip border tiles
-                    if (visited[nx][ny]) continue;
-
-                    if (mapGrid[nx][ny] == ' ') {
-                        // Found an open area, carve a path
-                        connectRandomPoints(mapGrid, x, y, nx, ny, corridorWidth);
-                        return;
-                    }
-
-                    visited[nx][ny] = true;
-                    queue.push({nx, ny});
-                }
-            }
-        }
-    };
-
-    // Main loop to detect and fix notches
-    for (int x = 1; x < width - 1; ++x) {
-        for (int y = 1; y < height - 1; ++y) {
-            if (isNotch(x, y)) {
-                // DFS to calculate the depth of the notch area
-                std::vector<std::vector<bool>> visited(width, std::vector<bool>(height, false));
-                int depth = dfs(x, y, visited);
-
-                // Small notch, fill it
-                if (depth <= 3) {
-                    fillNotch(x, y);
-                } else if (depth <= 10){
-                    // Larger notch, connect it to the road
-                    connectToRoad(x, y);
-                }
-            }
-        }
-    }
-}
-
 void connectCorners(std::vector<std::vector<char>>& mapGrid, int width, int height) {
     // Define corner points
     std::vector<std::pair<int, int>> corners = {
         {1, 1}, {1, height - 2}, {width - 2, height - 2}, {width - 2, 1}};
     
     // Calculate the center point
-    int centerX = width / 2;
-    int centerY = height / 2;
+    int centerX = std::rand() % (width-1);
+    int centerY = std::rand() % (height-1);
+    int corridorWidth = 2;
 
-    // Clear the center area to ensure all lines can intersect
-    int corridorWidth = 2; // Minimum corridor width
+    // Clear the exact center area to ensure all lines intersect here
     for (int x = centerX - corridorWidth / 2; x <= centerX + corridorWidth / 2; ++x) {
         for (int y = centerY - corridorWidth / 2; y <= centerY + corridorWidth / 2; ++y) {
             if (x >= 1 && x < width - 1 && y >= 1 && y < height - 1) {
-                mapGrid[x][y] = ' '; // Ensure the center area is passable
+                mapGrid[x][y] = ' ';
             }
         }
     }
 
-    // Draw wide slanted lines from each corner to the center
+    // Internal slope control (cannot be changed outside the function)
+    float slopePreference = 1.0f; // Controls the slope behavior
+
+    // Draw slanted corridors from each corner to the center
     for (const auto& corner : corners) {
         int x = corner.first;
         int y = corner.second;
@@ -218,9 +82,9 @@ void connectCorners(std::vector<std::vector<char>>& mapGrid, int width, int heig
         int dx = (centerX > x) ? 1 : -1;
         int dy = (centerY > y) ? 1 : -1;
 
-        // Draw a wide diagonal corridor
+        // Draw a corridor from the corner to the exact center
         while (x != centerX || y != centerY) {
-            // Create a corridor with a width of 'corridorWidth'
+            // Create a wide corridor using the specified width
             for (int offsetX = -corridorWidth / 2; offsetX <= corridorWidth / 2; ++offsetX) {
                 for (int offsetY = -corridorWidth / 2; offsetY <= corridorWidth / 2; ++offsetY) {
                     int nx = x + offsetX;
@@ -231,9 +95,25 @@ void connectCorners(std::vector<std::vector<char>>& mapGrid, int width, int heig
                 }
             }
 
-            // Move diagonally towards the center
-            if (x != centerX) x += dx;
-            if (y != centerY) y += dy;
+            // Adjust slope dynamically within the function
+            if (std::rand() % 100 < (int)(slopePreference * 50)) {
+                // Prefer diagonal movement
+                if (x != centerX && y != centerY) {
+                    x += dx;
+                    y += dy;
+                } else if (x != centerX) {
+                    x += dx; // Horizontal fallback
+                } else if (y != centerY) {
+                    y += dy; // Vertical fallback
+                }
+            } else {
+                // Prefer horizontal or vertical movement
+                if (x != centerX) {
+                    x += dx; // Horizontal movement
+                } else if (y != centerY) {
+                    y += dy; // Vertical movement
+                }
+            }
         }
     }
 }
@@ -287,8 +167,8 @@ void connectRandomPoints(std::vector<std::vector<char>>& mapGrid, int x1, int y1
 
 void placeDenseClusters(std::vector<std::vector<char>>& mapGrid, int width, int height) {
     int maxClusters = 400 + std::rand() % 200;  // Reduced cluster count
-    int minClusterSize = 5;                 
-    int maxClusterSize = 30;                // Smaller cluster sizes
+    int minClusterSize = 1;                 
+    int maxClusterSize = 100;                // Smaller cluster sizes
 
     for (int i = 0; i < maxClusters; ++i) {
         char clusterType = (std::rand() % 2 == 0) ? 'W' : 'A';
@@ -415,6 +295,26 @@ void cleanLonelyObjects(std::vector<std::vector<char>>& mapGrid, int width, int 
                 for (const auto& [cx, cy] : cluster) {
                     mapGrid[cx][cy] = ' '; // Clean up lonely cluster
                 }
+            }
+        }
+    }
+}
+
+void fillHolesWithWalls(std::vector<std::vector<char>>& mapGrid, int width, int height) {
+    // A helper function to check if a cell is within bounds
+    auto isValidCell = [&](int x, int y) {
+        return x >= 0 && x < height && y >= 0 && y < width;
+    };
+
+    std::vector<std::vector<bool>> visited(width, std::vector<bool>(height, false));
+    std::vector<std::pair<int, int>> road;
+
+    bfs(mapGrid, visited, 1, 1, ' ', road);
+
+    for (int x = 0; x < width; ++x) {
+        for (int y = 0; y < height; ++y) {
+            if (!visited[x][y] && mapGrid[x][y] == ' ') {
+                mapGrid[x][y] = 'A'; // Replace with wall
             }
         }
     }
