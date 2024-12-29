@@ -4,6 +4,9 @@
 #include <iostream>
 #include <map>
 #include <queue>
+#include <utility>
+#include <algorithm>
+#include <stack>
 #include "GameObject.h"
 
 void connectCorners(std::vector<std::vector<char>>& mapGrid, int width, int height);
@@ -27,7 +30,7 @@ std::vector<MapObject> generateMap(int width, int height, unsigned seed) {
     connectCorners(mapGrid, width, height);
 
     // draw random road
-    for(int i=0 ;i<std::rand()%10+5; i++){
+    for(int i=0 ;i<std::rand()%10+20; i++){
         int x1 = std::rand() % width;
         int y1 = std::rand() % height;
         int x2 = std::rand() % width;
@@ -59,11 +62,12 @@ std::vector<MapObject> generateMap(int width, int height, unsigned seed) {
 }
 
 void fixupNotches(std::vector<std::vector<char>>& mapGrid, int width, int height, int corridorWidth) {
+    // Helper to check if a tile is a wall or border
     auto isWallOrBorder = [&](int x, int y) {
-        // Skip border tiles
         return x < 1 || x >= width - 1 || y < 1 || y >= height - 1 || mapGrid[x][y] == 'W';
     };
 
+    // Helper to detect if a space is a notch
     auto isNotch = [&](int x, int y) {
         if (mapGrid[x][y] != ' ') return false; // Only consider empty spaces
 
@@ -77,11 +81,37 @@ void fixupNotches(std::vector<std::vector<char>>& mapGrid, int width, int height
                 }
             }
         }
-        return wallCount >= 6; // Notch if most surroundings are walls or borders
+        return wallCount >= 6; // Consider it a notch if most of the surrounding tiles are walls or borders
     };
 
+    // DFS to check depth of notch area
+    auto dfs = [&](int startX, int startY, std::vector<std::vector<bool>>& visited) -> int {
+        int depth = 0;
+        std::stack<std::pair<int, int>> stack;
+        stack.push({startX, startY});
+        visited[startX][startY] = true;
+
+        while (!stack.empty()) {
+            auto [x, y] = stack.top();
+            stack.pop();
+            ++depth;
+
+            for (int dx = -1; dx <= 1; ++dx) {
+                for (int dy = -1; dy <= 1; ++dy) {
+                    int nx = x + dx;
+                    int ny = y + dy;
+                    if (nx >= 1 && nx < width - 1 && ny >= 1 && ny < height - 1 && !visited[nx][ny] && mapGrid[nx][ny] == ' ') {
+                        visited[nx][ny] = true;
+                        stack.push({nx, ny});
+                    }
+                }
+            }
+        }
+        return depth;
+    };
+
+    // Helper to fill the notch with nearby blocks
     auto fillNotch = [&](int x, int y) {
-        // Find the most common nearby object (e.g., wall or water)
         std::map<char, int> nearbyCounts;
         for (int dx = -1; dx <= 1; ++dx) {
             for (int dy = -1; dy <= 1; ++dy) {
@@ -107,8 +137,9 @@ void fixupNotches(std::vector<std::vector<char>>& mapGrid, int width, int height
         }
     };
 
+    // Helper to connect the notch to the road
     auto connectToRoad = [&](int x, int y) {
-        // Find the nearest open tile
+        // BFS to find nearest open area and connect to it
         std::queue<std::pair<int, int>> queue;
         std::vector<std::vector<bool>> visited(width, std::vector<bool>(height, false));
         queue.push({x, y});
@@ -143,19 +174,15 @@ void fixupNotches(std::vector<std::vector<char>>& mapGrid, int width, int height
     for (int x = 1; x < width - 1; ++x) {
         for (int y = 1; y < height - 1; ++y) {
             if (isNotch(x, y)) {
-                // Decide action based on notch size
-                int notchSize = 0;
-                for (int dx = -1; dx <= 1; ++dx) {
-                    for (int dy = -1; dy <= 1; ++dy) {
-                        if (mapGrid[x + dx][y + dy] == ' ') ++notchSize;
-                    }
-                }
+                // DFS to calculate the depth of the notch area
+                std::vector<std::vector<bool>> visited(width, std::vector<bool>(height, false));
+                int depth = dfs(x, y, visited);
 
-                if (notchSize <= 2) {
-                    // Small notch, fill it
+                // Small notch, fill it
+                if (depth <= 3) {
                     fillNotch(x, y);
-                } else {
-                    // Larger notch, connect it
+                } else if (depth <= 10){
+                    // Larger notch, connect it to the road
                     connectToRoad(x, y);
                 }
             }
@@ -259,7 +286,7 @@ void connectRandomPoints(std::vector<std::vector<char>>& mapGrid, int x1, int y1
 }
 
 void placeDenseClusters(std::vector<std::vector<char>>& mapGrid, int width, int height) {
-    int maxClusters = 200 + std::rand() % 50;  // Reduced cluster count
+    int maxClusters = 400 + std::rand() % 200;  // Reduced cluster count
     int minClusterSize = 5;                 
     int maxClusterSize = 30;                // Smaller cluster sizes
 
