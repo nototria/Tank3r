@@ -192,3 +192,7 @@ void GameServer::tcp_listen(){
         room_mgr.check_state();
     }
 }
+
+void GameServer::udp_listen(){
+    
+}

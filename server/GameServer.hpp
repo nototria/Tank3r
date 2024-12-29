@@ -7,13 +7,21 @@
 #include<poll.h>
 #include<sstream>
 #include<pthread.h>
+#include<queue>
 class GameServer{
 private:
     char recv_buffer[1024], send_buffer[1024];
     int client_count;
-    ClientManager cli_mgr;
-    RoomManager room_mgr;
-    std::stringstream client_buffer[MAX_CLIENTS];
+    ClientManager cli_mgr;  //access by tcp_listen, game_thread
+    RoomManager room_mgr;   //access by tcp_listen, game_thread
+    std::stringstream client_buffer[MAX_CLIENTS];//access by tcp_listen
+
+    std::queue<InputStruct> input_buffer[MAX_CLIENTS];//access by udp_listen, game_thread
+    pthread_mutex_t input_buffer_lock[MAX_CLIENTS];
+
+    struct sockaddr_in client_udp_addr[MAX_CLIENTS];//access by udp_listen, game_thread
+    pthread_mutex_t client_udp_addr_lock[MAX_CLIENTS];
+
     void recv_commands();
     void recv_connection();
 
@@ -50,5 +58,6 @@ public:
     inline bool is_full() const;
 
     void tcp_listen();
+    void udp_listen();
 };
 #endif

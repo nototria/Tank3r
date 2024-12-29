@@ -4,7 +4,7 @@
 #define SERV_PORT 9999
 #define SERV_IP "140.113.66.206"
 #define MAX_CLIENTS 1000
-#define MAX_ROOMS 1000
+#define MAX_ROOMS 10000
 #define ROOM_MAX_CLIENTS 4
 #define COMMAND_SEP ','
 
