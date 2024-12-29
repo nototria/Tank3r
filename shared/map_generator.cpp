@@ -6,12 +6,6 @@
 #include <queue>
 #include "GameObject.h"
 
-struct Room {
-    int x, y, width, height;
-};
-
-std::vector<Room> performBSP(int width, int height, int minRoomSize, int maxSplits);
-void connectRooms(const std::vector<Room>& rooms, std::vector<std::vector<char>>& mapGrid);
 void connectCorners(std::vector<std::vector<char>>& mapGrid, int width, int height);
 void placeDenseClusters(std::vector<std::vector<char>>& mapGrid, int width, int height);
 void connectRandomPoints(std::vector<std::vector<char>>& mapGrid, int x1, int y1, int x2, int y2, int corridorWidth);
@@ -21,19 +15,10 @@ void cleanLonelyObjects(std::vector<std::vector<char>>& mapGrid, int width, int 
 
 std::vector<MapObject> generateMap(int width, int height, unsigned seed) {
     std::vector<MapObject> mapObjects;
-    std::srand(seed); // Seed for reproducibility
+    std::srand(seed);
 
     // Initialize the map grid with empty spaces
     std::vector<std::vector<char>> mapGrid(width, std::vector<char>(height, ' '));
-
-    // Perform BSP to divide the map into rooms
-    int minRoomSize = 5;
-    int maxSplits = 5;
-    std::vector<Room> rooms = performBSP(width, height, minRoomSize, maxSplits);
-
-
-    // Connect rooms with corridors
-    // connectRooms(rooms, mapGrid);
 
     // Place dense clusters of walls and water
     placeDenseClusters(mapGrid, width, height);
@@ -47,7 +32,7 @@ std::vector<MapObject> generateMap(int width, int height, unsigned seed) {
         int y1 = std::rand() % height;
         int x2 = std::rand() % width;
         int y2 = std::rand() % height;
-        connectRandomPoints(mapGrid, x1, y1, x2, y2, 1);
+        connectRandomPoints(mapGrid, x1, y1, x2, y2, 3);
     }
 
     // Fix up notches in the map
@@ -178,68 +163,6 @@ void fixupNotches(std::vector<std::vector<char>>& mapGrid, int width, int height
     }
 }
 
-std::vector<Room> performBSP(int width, int height, int minRoomSize, int maxSplits) {
-    std::vector<Room> rooms;
-    std::vector<Room> splits = {{1, 1, width - 2, height - 2}}; // Avoid borders
-
-    for (int i = 0; i < maxSplits; ++i) {
-        std::vector<Room> newSplits;
-        for (const auto& room : splits) {
-            bool splitHorizontally = std::rand() % 2;
-            if (splitHorizontally && room.height > 2 * minRoomSize) {
-                int split = std::rand() % (room.height - 2 * minRoomSize) + minRoomSize;
-                newSplits.push_back({room.x, room.y, room.width, split});
-                newSplits.push_back({room.x, room.y + split, room.width, room.height - split});
-            } else if (!splitHorizontally && room.width > 2 * minRoomSize) {
-                int split = std::rand() % (room.width - 2 * minRoomSize) + minRoomSize;
-                newSplits.push_back({room.x, room.y, split, room.height});
-                newSplits.push_back({room.x + split, room.y, room.width - split, room.height});
-            } else {
-                newSplits.push_back(room);
-            }
-        }
-        splits = newSplits;
-    }
-
-    for (const auto& split : splits) {
-        int roomWidth = std::max(minRoomSize, std::rand() % (split.width - 3) + 3);
-        int roomHeight = std::max(minRoomSize, std::rand() % (split.height - 3) + 3);
-        int roomX = split.x + std::rand() % (split.width - roomWidth + 1);
-        int roomY = split.y + std::rand() % (split.height - roomHeight + 1);
-        rooms.push_back({roomX, roomY, roomWidth, roomHeight});
-    }
-
-    return rooms;
-}
-
-void connectRooms(const std::vector<Room>& rooms, std::vector<std::vector<char>>& mapGrid) {
-    for (size_t i = 1; i < rooms.size(); ++i) {
-        Room a = rooms[i - 1];
-        Room b = rooms[i];
-
-        int ax = a.x + a.width / 2;
-        int ay = a.y + a.height / 2;
-        int bx = b.x + b.width / 2;
-        int by = b.y + b.height / 2;
-
-        if (std::rand() % 2 == 0) {
-            for (int x = std::min(ax, bx); x <= std::max(ax, bx); ++x) {
-                mapGrid[x][ay] = ' ';
-            }
-            for (int y = std::min(ay, by); y <= std::max(ay, by); ++y) {
-                mapGrid[bx][y] = ' ';
-            }
-        } else {
-            for (int y = std::min(ay, by); y <= std::max(ay, by); ++y) {
-                mapGrid[ax][y] = ' ';
-            }
-            for (int x = std::min(ax, bx); x <= std::max(ax, bx); ++x) {
-                mapGrid[x][by] = ' ';
-            }
-        }
-    }
-}
-
 void connectCorners(std::vector<std::vector<char>>& mapGrid, int width, int height) {
     // Define corner points
     std::vector<std::pair<int, int>> corners = {
@@ -336,9 +259,9 @@ void connectRandomPoints(std::vector<std::vector<char>>& mapGrid, int x1, int y1
 }
 
 void placeDenseClusters(std::vector<std::vector<char>>& mapGrid, int width, int height) {
-    int maxClusters = 100 + std::rand() % 50;  // Reduced cluster count
-    int minClusterSize = 10;                 
-    int maxClusterSize = 60;                // Smaller cluster sizes
+    int maxClusters = 200 + std::rand() % 50;  // Reduced cluster count
+    int minClusterSize = 5;                 
+    int maxClusterSize = 30;                // Smaller cluster sizes
 
     for (int i = 0; i < maxClusters; ++i) {
         char clusterType = (std::rand() % 2 == 0) ? 'W' : 'A';
