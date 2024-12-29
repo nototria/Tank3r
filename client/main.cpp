@@ -891,7 +891,7 @@ int main() {
 
             case GameState::GameLoop: {
                 // TBD: Generate static objects
-                std::vector<MapObject> staticObjects = generateMap(width, height, 3213123131);
+                std::vector<MapObject> staticObjects = generateMap(width, height, 5269);
                 // TBD: get other players info from server (PlayerNames)
                 gameLoop(gameWin, width, height, staticObjects, state, username, playerNum, PlayerNames);
                 break;
