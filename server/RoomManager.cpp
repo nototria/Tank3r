@@ -26,7 +26,7 @@ bool RoomManager::join_room(const int client_id, int &room_id){
     //if room_id < 0, then random match
     if(room_id<0){
         std::vector<int> wait_rooms, empty_rooms;
-        for(int i=0;i<MAX_CLIENTS;++i){
+        for(int i=0;i<MAX_ROOMS;++i){
             if(this->room_data_list[i].player_count()==0){
                 empty_rooms.push_back(i);
             }

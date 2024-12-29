@@ -8,6 +8,7 @@
 #include<sstream>
 #include<pthread.h>
 #include<queue>
+#include<netinet/in.h>
 class GameServer{
 private:
     char recv_buffer[1024], send_buffer[1024];
