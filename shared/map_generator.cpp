@@ -2,6 +2,8 @@
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
+#include <map>
+#include <queue>
 #include "GameObject.h"
 
 struct Room {
@@ -12,6 +14,10 @@ std::vector<Room> performBSP(int width, int height, int minRoomSize, int maxSpli
 void connectRooms(const std::vector<Room>& rooms, std::vector<std::vector<char>>& mapGrid);
 void connectCorners(std::vector<std::vector<char>>& mapGrid, int width, int height);
 void placeDenseClusters(std::vector<std::vector<char>>& mapGrid, int width, int height);
+void connectRandomPoints(std::vector<std::vector<char>>& mapGrid, int x1, int y1, int x2, int y2, int corridorWidth);
+void fixupNotches(std::vector<std::vector<char>>& mapGrid, int width, int height, int corridorWidth);
+void drawWaterBorder(std::vector<std::vector<char>>& mapGrid, int width, int height, int excludeAreaSize);
+void cleanLonelyObjects(std::vector<std::vector<char>>& mapGrid, int width, int height, int minClusterSize);
 
 std::vector<MapObject> generateMap(int width, int height, unsigned seed) {
     std::vector<MapObject> mapObjects;
@@ -27,13 +33,31 @@ std::vector<MapObject> generateMap(int width, int height, unsigned seed) {
 
 
     // Connect rooms with corridors
-    connectRooms(rooms, mapGrid);
+    // connectRooms(rooms, mapGrid);
 
     // Place dense clusters of walls and water
     placeDenseClusters(mapGrid, width, height);
 
     // Ensure the four corners of the map are connected
     connectCorners(mapGrid, width, height);
+
+    // draw random road
+    for(int i=0 ;i<std::rand()%10+5; i++){
+        int x1 = std::rand() % width;
+        int y1 = std::rand() % height;
+        int x2 = std::rand() % width;
+        int y2 = std::rand() % height;
+        connectRandomPoints(mapGrid, x1, y1, x2, y2, 1);
+    }
+
+    // Fix up notches in the map
+    fixupNotches(mapGrid, width, height, 3);
+
+    // draw water border
+    drawWaterBorder(mapGrid, width, height, 3);
+
+    // Fix isolated water and wall objects
+    cleanLonelyObjects(mapGrid, width, height, 2);
 
     // Convert mapGrid to mapObjects
     for (int x = 0; x < width; ++x) {
@@ -47,6 +71,111 @@ std::vector<MapObject> generateMap(int width, int height, unsigned seed) {
     }
 
     return mapObjects;
+}
+
+void fixupNotches(std::vector<std::vector<char>>& mapGrid, int width, int height, int corridorWidth) {
+    auto isWallOrBorder = [&](int x, int y) {
+        // Skip border tiles
+        return x < 1 || x >= width - 1 || y < 1 || y >= height - 1 || mapGrid[x][y] == 'W';
+    };
+
+    auto isNotch = [&](int x, int y) {
+        if (mapGrid[x][y] != ' ') return false; // Only consider empty spaces
+
+        // Count surrounding walls or borders
+        int wallCount = 0;
+        for (int dx = -1; dx <= 1; ++dx) {
+            for (int dy = -1; dy <= 1; ++dy) {
+                if (dx == 0 && dy == 0) continue; // Skip the current tile
+                if (isWallOrBorder(x + dx, y + dy)) {
+                    ++wallCount;
+                }
+            }
+        }
+        return wallCount >= 6; // Notch if most surroundings are walls or borders
+    };
+
+    auto fillNotch = [&](int x, int y) {
+        // Find the most common nearby object (e.g., wall or water)
+        std::map<char, int> nearbyCounts;
+        for (int dx = -1; dx <= 1; ++dx) {
+            for (int dy = -1; dy <= 1; ++dy) {
+                if (dx == 0 && dy == 0) continue;
+                char tile = mapGrid[x + dx][y + dy];
+                if (tile != ' ') ++nearbyCounts[tile];
+            }
+        }
+
+        // Choose the most common type
+        char fillType = 'W'; // Default to wall
+        int maxCount = 0;
+        for (const auto& [type, count] : nearbyCounts) {
+            if (count > maxCount) {
+                maxCount = count;
+                fillType = type;
+            }
+        }
+
+        // Fill the notch (but not the borders)
+        if (!isWallOrBorder(x, y)) {
+            mapGrid[x][y] = fillType;
+        }
+    };
+
+    auto connectToRoad = [&](int x, int y) {
+        // Find the nearest open tile
+        std::queue<std::pair<int, int>> queue;
+        std::vector<std::vector<bool>> visited(width, std::vector<bool>(height, false));
+        queue.push({x, y});
+        visited[x][y] = true;
+
+        while (!queue.empty()) {
+            auto [cx, cy] = queue.front();
+            queue.pop();
+
+            for (int dx = -1; dx <= 1; ++dx) {
+                for (int dy = -1; dy <= 1; ++dy) {
+                    int nx = cx + dx;
+                    int ny = cy + dy;
+
+                    if (nx < 1 || nx >= width - 1 || ny < 1 || ny >= height - 1) continue; // Skip border tiles
+                    if (visited[nx][ny]) continue;
+
+                    if (mapGrid[nx][ny] == ' ') {
+                        // Found an open area, carve a path
+                        connectRandomPoints(mapGrid, x, y, nx, ny, corridorWidth);
+                        return;
+                    }
+
+                    visited[nx][ny] = true;
+                    queue.push({nx, ny});
+                }
+            }
+        }
+    };
+
+    // Main loop to detect and fix notches
+    for (int x = 1; x < width - 1; ++x) {
+        for (int y = 1; y < height - 1; ++y) {
+            if (isNotch(x, y)) {
+                // Decide action based on notch size
+                int notchSize = 0;
+                for (int dx = -1; dx <= 1; ++dx) {
+                    for (int dy = -1; dy <= 1; ++dy) {
+                        if (mapGrid[x + dx][y + dy] == ' ') ++notchSize;
+                    }
+                }
+
+                if (notchSize <= 2) {
+                    // Small notch, fill it
+                    fillNotch(x, y);
+                } else {
+                    // Larger notch, connect it
+                    connectToRoad(x, y);
+                }
+            }
+        }
+    }
 }
 
 std::vector<Room> performBSP(int width, int height, int minRoomSize, int maxSplits) {
@@ -121,7 +250,7 @@ void connectCorners(std::vector<std::vector<char>>& mapGrid, int width, int heig
     int centerY = height / 2;
 
     // Clear the center area to ensure all lines can intersect
-    int corridorWidth = 3; // Minimum corridor width
+    int corridorWidth = 2; // Minimum corridor width
     for (int x = centerX - corridorWidth / 2; x <= centerX + corridorWidth / 2; ++x) {
         for (int y = centerY - corridorWidth / 2; y <= centerY + corridorWidth / 2; ++y) {
             if (x >= 1 && x < width - 1 && y >= 1 && y < height - 1) {
@@ -159,10 +288,57 @@ void connectCorners(std::vector<std::vector<char>>& mapGrid, int width, int heig
     }
 }
 
+void connectRandomPoints(std::vector<std::vector<char>>& mapGrid, int x1, int y1, int x2, int y2, int corridorWidth) {
+    int currentX = x1;
+    int currentY = y1;
+
+    // Carve the starting point
+    for (int offsetX = -corridorWidth / 2; offsetX <= corridorWidth / 2; ++offsetX) {
+        for (int offsetY = -corridorWidth / 2; offsetY <= corridorWidth / 2; ++offsetY) {
+            int nx = currentX + offsetX;
+            int ny = currentY + offsetY;
+            if (nx >= 1 && nx < mapGrid.size() - 1 && ny >= 1 && ny < mapGrid[0].size() - 1) {
+                mapGrid[nx][ny] = ' ';
+            }
+        }
+    }
+
+    // Randomly carve a tortuous path to the destination
+    while (currentX != x2 || currentY != y2) {
+        // Randomly decide whether to move horizontally or vertically
+        bool moveHorizontally = (std::rand() % 2 == 0);
+
+        if (moveHorizontally && currentX != x2) {
+            // Move horizontally towards the target
+            currentX += (x2 > currentX) ? 1 : -1;
+        } else if (!moveHorizontally && currentY != y2) {
+            // Move vertically towards the target
+            currentY += (y2 > currentY) ? 1 : -1;
+        }
+
+        // Occasionally deviate from the direct path to make it tortuous
+        if (std::rand() % 4 == 0) {
+            currentX += (std::rand() % 3 - 1); // Move -1, 0, or 1 randomly
+            currentY += (std::rand() % 3 - 1);
+        }
+
+        // Carve the current position as part of the corridor
+        for (int offsetX = -corridorWidth / 2; offsetX <= corridorWidth / 2; ++offsetX) {
+            for (int offsetY = -corridorWidth / 2; offsetY <= corridorWidth / 2; ++offsetY) {
+                int nx = currentX + offsetX;
+                int ny = currentY + offsetY;
+                if (nx >= 1 && nx < mapGrid.size() - 1 && ny >= 1 && ny < mapGrid[0].size() - 1) {
+                    mapGrid[nx][ny] = ' ';
+                }
+            }
+        }
+    }
+}
+
 void placeDenseClusters(std::vector<std::vector<char>>& mapGrid, int width, int height) {
     int maxClusters = 100 + std::rand() % 50;  // Reduced cluster count
     int minClusterSize = 10;                 
-    int maxClusterSize = 100;                // Smaller cluster sizes
+    int maxClusterSize = 60;                // Smaller cluster sizes
 
     for (int i = 0; i < maxClusters; ++i) {
         char clusterType = (std::rand() % 2 == 0) ? 'W' : 'A';
@@ -190,6 +366,105 @@ void placeDenseClusters(std::vector<std::vector<char>>& mapGrid, int width, int 
         if (clusterTiles.size() < minClusterSize) {
             for (const auto& [x, y] : clusterTiles) {
                 mapGrid[x][y] = ' ';
+            }
+        }
+    }
+}
+
+void drawWaterBorder(std::vector<std::vector<char>>& mapGrid, int width, int height, int excludeAreaSize) {
+    // Define the corner coordinates
+    std::vector<std::pair<int, int>> corners = {
+        {1, 1}, {1, height - 2}, {width - 2, height - 2}, {width - 2, 1}
+    };
+
+    // Helper function to check if a tile is near any of the four corners
+    auto isNearCorner = [&](int x, int y) {
+        for (const auto& corner : corners) {
+            if (std::abs(x - corner.first) < excludeAreaSize && std::abs(y - corner.second) < excludeAreaSize) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    // Draw the water border
+    for (int x = 1; x < width - 1; ++x) {
+        // Top border (excluding the area near the corners)
+        if (!isNearCorner(x, 1)) {
+            mapGrid[x][1] = 'A'; // Water
+        }
+
+        // Bottom border (excluding the area near the corners)
+        if (!isNearCorner(x, height - 2)) {
+            mapGrid[x][height - 2] = 'A'; // Water
+        }
+    }
+
+    for (int y = 1; y < height - 1; ++y) {
+        // Left border (excluding the area near the corners)
+        if (!isNearCorner(1, y)) {
+            mapGrid[1][y] = 'A'; // Water
+        }
+
+        // Right border (excluding the area near the corners)
+        if (!isNearCorner(width - 2, y)) {
+            mapGrid[width - 2][y] = 'A'; // Water
+        }
+    }
+}
+
+void bfs(std::vector<std::vector<char>>& mapGrid, std::vector<std::vector<bool>>& visited, int startX, int startY, char objectType, std::vector<std::pair<int, int>>& cluster) {
+    int width = mapGrid.size();
+    int height = mapGrid[0].size();
+    
+    std::queue<std::pair<int, int>> q;
+    q.push({startX, startY});
+    visited[startX][startY] = true; // Mark as visited
+    cluster.push_back({startX, startY});
+
+    // Directions for up, down, left, and right movement
+    int directions[4][2] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+
+    while (!q.empty()) {
+        auto [x, y] = q.front();
+        q.pop();
+
+        // Explore the neighbors (up, down, left, right)
+        for (auto& dir : directions) {
+            int nx = x + dir[0];
+            int ny = y + dir[1];
+
+            // Ensure within bounds and matching the object type, and not visited yet
+            if (nx >= 1 && nx < width - 1 && ny >= 1 && ny < height - 1 && !visited[nx][ny] && mapGrid[nx][ny] == objectType) {
+                visited[nx][ny] = true; // Mark as visited
+                q.push({nx, ny});
+                cluster.push_back({nx, ny});
+            }
+        }
+    }
+}
+
+void cleanLonelyObjects(std::vector<std::vector<char>>& mapGrid, int width, int height, int minClusterSize) {
+    // Create a visited map to track visited tiles
+    std::vector<std::vector<bool>> visited(width, std::vector<bool>(height, false));
+
+    // Loop through the map and apply BFS to detect clusters
+    for (int x = 1; x < width - 1; ++x) {
+        for (int y = 1; y < height - 1; ++y) {
+            char current = mapGrid[x][y];
+
+            // Skip empty spaces or already visited tiles
+            if (current == ' ' || visited[x][y]) continue;
+
+            // Use BFS to find and count the size of the cluster
+            std::vector<std::pair<int, int>> cluster;
+            bfs(mapGrid, visited, x, y, current, cluster);
+
+            // If the cluster size is smaller than the minimum size, clean up the cluster
+            if (cluster.size() < minClusterSize) {
+                for (const auto& [cx, cy] : cluster) {
+                    mapGrid[cx][cy] = ' '; // Clean up lonely cluster
+                }
             }
         }
     }

@@ -85,11 +85,11 @@ public:
     MapObjectType getType() const { return type; }
     bool isBlocking() const {return type == MapObjectType::wall;}
     bool isObstacle() const {return (type == MapObjectType::water || type == MapObjectType::wall);}
-    char getSymbol() const {
+    std::wstring getSymbol() const {
         switch (type) {
-            case MapObjectType::wall: return '#'; // wall
-            case MapObjectType::water: return '~'; // water
-            default: return ' ';
+            case MapObjectType::wall: return L"█"; // wall
+            case MapObjectType::water: return L"▒"; // water
+            default: return L" ";
         }
     }
 };
