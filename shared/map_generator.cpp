@@ -15,6 +15,7 @@ void connectRandomPoints(std::vector<std::vector<char>>& mapGrid, int x1, int y1
 void drawWaterBorder(std::vector<std::vector<char>>& mapGrid, int width, int height, int excludeAreaSize);
 void cleanLonelyObjects(std::vector<std::vector<char>>& mapGrid, int width, int height, int minClusterSize);
 void fillHolesWithWalls(std::vector<std::vector<char>>& mapGrid, int width, int height);
+void connectLargeHolesToCorners(std::vector<std::vector<char>>& mapGrid, int width, int height, int minClusterSize);
 
 std::vector<MapObject> generateMap(int width, int height, unsigned seed) {
     std::vector<MapObject> mapObjects;
@@ -22,7 +23,7 @@ std::vector<MapObject> generateMap(int width, int height, unsigned seed) {
     std::vector<std::vector<char>> mapGrid(width, std::vector<char>(height, ' '));
 
     placeDenseClusters(mapGrid, width, height);
-    
+
     // draw random road
     for(int i=0 ;i<std::rand()%10+5; i++){
         int x1 = std::rand() % width;
@@ -34,7 +35,8 @@ std::vector<MapObject> generateMap(int width, int height, unsigned seed) {
 
     connectCorners(mapGrid, width, height);
     drawWaterBorder(mapGrid, width, height, 3);
-    cleanLonelyObjects(mapGrid, width, height, 3);
+    cleanLonelyObjects(mapGrid, width, height, 5);
+    connectLargeHolesToCorners(mapGrid, width, height, 15);
     fillHolesWithWalls(mapGrid, width, height);
 
     // Convert mapGrid to mapObjects
@@ -314,7 +316,60 @@ void fillHolesWithWalls(std::vector<std::vector<char>>& mapGrid, int width, int 
     for (int x = 0; x < width; ++x) {
         for (int y = 0; y < height; ++y) {
             if (!visited[x][y] && mapGrid[x][y] == ' ') {
-                mapGrid[x][y] = 'A'; // Replace with wall
+                mapGrid[x][y] = 'W'; // Replace with wall
+            }
+        }
+    }
+}
+
+void connectLargeHolesToCorners(std::vector<std::vector<char>>& mapGrid, int width, int height, int minClusterSize) {
+    std::vector<std::pair<int, int>> corners = {
+        {1, 1}, {1, height - 2}, {width - 2, height - 2}, {width - 2, 1}};
+    
+    // Visited map for BFS
+    std::vector<std::vector<bool>> visited(width, std::vector<bool>(height, false));
+
+    // Helper function to calculate Manhattan distance
+    auto manhattanDistance = [](int x1, int y1, int x2, int y2) {
+        return abs(x1 - x2) + abs(y1 - y2);
+    };
+
+    // Loop through the entire map to find inaccessible holes
+    for (int x = 1; x < width - 1; ++x) {
+        for (int y = 1; y < height - 1; ++y) {
+            // Skip already visited or non-empty cells
+            if (visited[x][y] || mapGrid[x][y] != ' ') continue;
+
+            // Gather the cluster using BFS
+            std::vector<std::pair<int, int>> cluster;
+            bfs(mapGrid, visited, x, y, ' ', cluster);
+
+            // Check if the cluster is large enough to connect
+            if (cluster.size() > minClusterSize) {
+                // Find the closest corner to this cluster
+                std::pair<int, int> nearestCorner = corners[0];
+                int minDistance = manhattanDistance(cluster[0].first, cluster[0].second, nearestCorner.first, nearestCorner.second);
+
+                for (const auto& corner : corners) {
+                    int distance = manhattanDistance(cluster[0].first, cluster[0].second, corner.first, corner.second);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        nearestCorner = corner;
+                    }
+                }
+
+                // Connect the cluster to the nearest corner
+                int x1 = cluster[0].first, y1 = cluster[0].second;
+                int x2 = nearestCorner.first, y2 = nearestCorner.second;
+
+                // Create a Manhattan path
+                while (x1 != x2 || y1 != y2) {
+                    mapGrid[x1][y1] = ' '; // Carve the path
+                    if (x1 < x2) x1++;
+                    else if (x1 > x2) x1--;
+                    if (y1 < y2) y1++;
+                    else if (y1 > y2) y1--;
+                }
             }
         }
     }
