@@ -78,6 +78,7 @@ void initGame(int& width, int& height, WINDOW*& titleWin, WINDOW*& inputWin, WIN
     setlocale(LC_ALL, "");
 
     // Initialize color pairs
+    init_color(COLOR_GRAY, 300, 300, 300);
     init_pair(1, COLOR_RED, COLOR_BLACK);
     init_pair(2, COLOR_GREEN, COLOR_BLACK);
     init_pair(3, COLOR_YELLOW, COLOR_BLACK);
@@ -85,6 +86,8 @@ void initGame(int& width, int& height, WINDOW*& titleWin, WINDOW*& inputWin, WIN
     init_pair(5, COLOR_MAGENTA, COLOR_BLACK);
     init_pair(6, COLOR_CYAN, COLOR_BLACK);
     init_pair(7, COLOR_WHITE, COLOR_BLACK);
+    init_pair(8, COLOR_GRAY, COLOR_BLACK);
+
     init_pair(11, COLOR_RED, COLOR_CYAN);
     init_pair(12, COLOR_GREEN, COLOR_CYAN);
     init_pair(13, COLOR_YELLOW, COLOR_CYAN);
@@ -93,8 +96,8 @@ void initGame(int& width, int& height, WINDOW*& titleWin, WINDOW*& inputWin, WIN
     init_pair(16, COLOR_CYAN, COLOR_CYAN);
     init_pair(17, COLOR_WHITE, COLOR_CYAN);
 
-    width = 100;
-    height = 40;
+    width = SCREEN_WIDTH;
+    height = SCREEN_HEIGHT;
 
     int startX = (COLS - width) / 2;
     int startY = (LINES - height) / 2;
@@ -137,7 +140,7 @@ void renderStaticObjects(WINDOW* win, const std::vector<MapObject>& objects) {
     setlocale(LC_ALL, "");
     for (const auto& obj : objects) {
         if(obj.getType() == MapObjectType::wall) {
-            wattron(win, COLOR_PAIR(COLOR_WHITE));
+            wattron(win, COLOR_PAIR(COLOR_GRAY));
         } else if(obj.getType() == MapObjectType::water) {
             wattron(win, COLOR_PAIR(COLOR_CYAN));
         }
@@ -266,19 +269,21 @@ void drawUsernameInput(WINDOW* win, const std::string& username) {
 void drawCustomBorder(WINDOW* win) {
     std::setlocale(LC_ALL, "");
     cchar_t vertical, horizontal, topLeft, topRight, bottomLeft, bottomRight;
-    wchar_t verticalChar[] = {L'║', 0};
-    wchar_t horizontalChar[] = {L'═', 0};
-    wchar_t topLeftChar[] = {L'╔', 0};
-    wchar_t topRightChar[] = {L'╗', 0};
-    wchar_t bottomLeftChar[] = {L'╚', 0};
-    wchar_t bottomRightChar[] = {L'╝', 0};
+    wchar_t verticalChar[] = {L'▒', 0};
+    wchar_t horizontalChar[] = {L'▒', 0};
+    wchar_t topLeftChar[] = {L'▒', 0};
+    wchar_t topRightChar[] = {L'▒', 0};
+    wchar_t bottomLeftChar[] = {L'▒', 0};
+    wchar_t bottomRightChar[] = {L'▒', 0};
     setcchar(&vertical, verticalChar, 0, 0, nullptr);
     setcchar(&horizontal, horizontalChar, 0, 0, nullptr);
     setcchar(&topLeft, topLeftChar, 0, 0, nullptr);
     setcchar(&topRight, topRightChar, 0, 0, nullptr);
     setcchar(&bottomLeft, bottomLeftChar, 0, 0, nullptr);
     setcchar(&bottomRight, bottomRightChar, 0, 0, nullptr);
+    wattron(win, COLOR_PAIR(COLOR_CYAN));
     wborder_set(win, &vertical, &vertical, &horizontal, &horizontal,&topLeft, &topRight, &bottomLeft, &bottomRight);
+    wattroff(win, COLOR_PAIR(COLOR_CYAN));
 }
 
 void handleUsernameInput(WINDOW* win, std::string& username) {
@@ -886,7 +891,7 @@ int main() {
 
             case GameState::GameLoop: {
                 // TBD: Generate static objects
-                std::vector<MapObject> staticObjects = generateMap(width, height, 55688);
+                std::vector<MapObject> staticObjects = generateMap(width, height, 3213123131);
                 // TBD: get other players info from server (PlayerNames)
                 gameLoop(gameWin, width, height, staticObjects, state, username, playerNum, PlayerNames);
                 break;
