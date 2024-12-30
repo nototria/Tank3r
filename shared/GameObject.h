@@ -169,7 +169,7 @@ public:
 // Tank
 class Tank : public GameObject {
 private:
-    Direction direction;
+    Direction direction;                                                            
     int color;
     int hp;
     bool isAlive;
