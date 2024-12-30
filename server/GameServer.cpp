@@ -50,6 +50,10 @@ void GameServer::add_client(const int client_fd){
             //send client_id to client
             snprintf(send_buffer,1024,"%s\n",id2str(i));
             write(client_fd,send_buffer,5);
+            //store cli addr
+            socklen_t addrlen;
+            getpeername(client_fd,(struct sockaddr*)this->client_udp_addr+i,&addrlen);
+            this->client_udp_addr[i].sin_port=UDP_PORT;
             return;
         }
     }
@@ -241,10 +245,6 @@ void* GameServer::udp_listen(void *obj_ptr){
         InputStruct tmp(self.udp_recv_buffer);
         
         if(tmp.valid && self.cli_mgr.get_state(tmp.client_id)==ClientData::play){
-            pthread_mutex_lock(self.client_udp_addr_mutex+tmp.client_id);
-            self.client_udp_addr[tmp.client_id]=udp_addr;//neet mutex
-            pthread_mutex_unlock(self.client_udp_addr_mutex+tmp.client_id);
-
             pthread_mutex_lock(self.input_buffer_mutex+tmp.client_id);
             self.input_buffer[tmp.client_id].push(tmp);//need mutex
             pthread_mutex_unlock(self.input_buffer_mutex+tmp.client_id);
