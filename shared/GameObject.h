@@ -169,10 +169,11 @@ public:
 // Tank
 class Tank : public GameObject {
 private:
-    Direction direction;
+    Direction direction;                                                            
     int color;
     int hp;
     bool isAlive;
+    std::string clientId;
     std::string name;
     std::vector<Bullet> bullets;
 
@@ -225,6 +226,10 @@ public:
 
     void setName(const std::string& newName) { name = newName; }
     std::string getName() const { return name; }
+
+    void setClientId(const std::string& newClientId) { clientId = newClientId; }
+
+    std::string getClientId() const { return clientId; }
 
     void setColor(const int& newColor) { color = newColor; }
     int getColor() { return color; }
