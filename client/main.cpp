@@ -4,6 +4,26 @@
 #include "../shared/map_generator.cpp"
 #include "../client/connect.cpp"
 
+// define
+void checkBulletTankCollisions(std::map<int,Tank>& tanksMap);
+void handleBulletCollisions(std::map<int,Tank>& tanksMap);
+void initGame(int& width, int& height, WINDOW*& titleWin, WINDOW*& inputWin, WINDOW*& roomWin, WINDOW*& gameWin, WINDOW*& endWin, GameState& state);
+void renderTank(WINDOW* win, Tank& tank);
+void renderStaticObjects(WINDOW* win, const std::vector<MapObject>& objects);
+void renderPlayerInfo(WINDOW* win, const std::string& playerName, int playerHP, int color);
+void drawTitleScreen(WINDOW* win);
+void drawUsernameInput(WINDOW* win, const std::string& username);
+void drawCustomBorder1(WINDOW* win);
+void drawCustomBorder2(WINDOW* win);
+void joinRoomById(WINDOW* win, std::string& roomId, int& connfd, int& clientId, std::string& username);
+void quickJoin(WINDOW* win, std::string& roomId, int& connfd, int& clientId, std::string& username);
+void RoomMenu(WINDOW* win, GameState& state, std::string& roomId, int& connfd, int& clientId, std::string& username);
+void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId, int& connfd);
+void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObject>& staticObjects, GameState& state, const int& clientId, int playerNum, std::map<int,std::string>&id2Names);
+void drawWinScreen(WINDOW* win);
+void drawLoseScreen(WINDOW* win);
+void drawTieScreen(WINDOW* win);
+
 // server side
 void checkBulletTankCollisions(std::map<int,Tank>& tanksMap) {
     for (auto& [id, tank] : tanksMap) {
@@ -135,12 +155,12 @@ void renderStaticObjects(WINDOW* win, const std::vector<MapObject>& objects) {
 void renderPlayerInfo(WINDOW* win, const std::string& playerName, int playerHP, int color) {
     werase(win);
     // name
-    mvwprintw(win, 2, 2, "Name: %s", playerName.c_str());
+    mvwprintw(win, 2, 2, "%s", playerName.c_str());
     // HP value
     mvwprintw(win, 5, 2, "HP: %d", playerHP);
     // HP bar
     wattron(win, COLOR_PAIR(color));
-    box(win, 0, 0);
+    drawCustomBorder2(win);
     std::wstring hpBar(playerHP, L'█');
     mvwaddwstr(win, 7, 3, hpBar.c_str());
     wattroff(win, COLOR_PAIR(color));
@@ -249,7 +269,7 @@ void drawUsernameInput(WINDOW* win, const std::string& username) {
     wrefresh(win);
 }
 
-void drawCustomBorder(WINDOW* win) {
+void drawCustomBorder1(WINDOW* win) {
     std::setlocale(LC_ALL, "");
     cchar_t vertical, horizontal, topLeft, topRight, bottomLeft, bottomRight;
     wchar_t verticalChar[] = {L'▒', 0};
@@ -269,19 +289,40 @@ void drawCustomBorder(WINDOW* win) {
     wattroff(win, COLOR_PAIR(COLOR_CYAN));
 }
 
+void drawCustomBorder2(WINDOW* win) {
+    std::setlocale(LC_ALL, "");
+    cchar_t vertical, horizontal, topLeft, topRight, bottomLeft, bottomRight;
+    wchar_t verticalChar[] = {L'║', 0};
+    wchar_t horizontalChar[] = {L'═', 0};
+    wchar_t topLeftChar[] = {L'╔', 0};
+    wchar_t topRightChar[] = {L'╗', 0};
+    wchar_t bottomLeftChar[] = {L'╚', 0};
+    wchar_t bottomRightChar[] = {L'╝', 0};
+    setcchar(&vertical, verticalChar, 0, 0, nullptr);
+    setcchar(&horizontal, horizontalChar, 0, 0, nullptr);
+    setcchar(&topLeft, topLeftChar, 0, 0, nullptr);
+    setcchar(&topRight, topRightChar, 0, 0, nullptr);
+    setcchar(&bottomLeft, bottomLeftChar, 0, 0, nullptr);
+    setcchar(&bottomRight, bottomRightChar, 0, 0, nullptr);
+    wborder_set(win, &vertical, &vertical, &horizontal, &horizontal,&topLeft, &topRight, &bottomLeft, &bottomRight);
+}
+
 void handleUsernameInput(WINDOW* win, std::string& username) {
     int maxY, maxX;
     getmaxyx(win, maxY, maxX);
     drawUsernameInput(win, username);
     int ch, cursor_position = 1;
-    curs_set(1);
-    echo();
+    noecho();
     keypad(win, TRUE);
     while (true) {
         int inputX = (maxX - username.length())/2;
         ch = wgetch(win);
         if (ch == '\n') {
             break;
+        } else if(ch == ','){
+            curs_set(0);
+            mvwprintw(win, 20, (maxX-21)/2, "Invalid character ','");
+            continue;
         } else if (ch == KEY_BACKSPACE || ch == 127) {
             if (!username.empty() && cursor_position > 1) {
                 username.erase(cursor_position - 2, 1);
@@ -297,6 +338,7 @@ void handleUsernameInput(WINDOW* win, std::string& username) {
                     break;
             }
         } else if (ch >= 32 && ch <= 126 && username.length() < 20) {
+            curs_set(1);
             username.insert(cursor_position - 1, 1, ch);
             cursor_position++;
         }
@@ -305,7 +347,6 @@ void handleUsernameInput(WINDOW* win, std::string& username) {
         wrefresh(win);
     }
     curs_set(0);
-    noecho();
 }
 
 void joinRoomById(WINDOW* win, std::string& roomId, int& connfd, int& clientId, std::string& username) {
@@ -562,20 +603,19 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
         StatusWin[clientIds[1]] = newwin(statusBlockHeight, statusBlockWidth, startY, startX + gridWidth);
     }
     if (playerNum >= 3) {
-        StatusWin[clientIds[2]] = newwin(statusBlockHeight, statusBlockWidth, startY + statusBlockHeight, startX - statusBlockWidth);
+        StatusWin[clientIds[2]] = newwin(statusBlockHeight, statusBlockWidth, startY + gridHeight - statusBlockHeight, startX - statusBlockWidth);
     }
     if (playerNum >= 4) {
-        StatusWin[clientIds[3]] = newwin(statusBlockHeight, statusBlockWidth, startY + statusBlockHeight, startX + gridWidth);
+        StatusWin[clientIds[3]] = newwin(statusBlockHeight, statusBlockWidth, startY + gridHeight - statusBlockHeight, startX + gridWidth);
     }
     // default values set
     keypad(gridWin, TRUE);
     nodelay(gridWin, TRUE);
-    drawCustomBorder(gridWin);
+    drawCustomBorder1(gridWin);
     GameTimer timer(0.128); // 7.5 FPS
     bool loopRunning = true;
 
     //remote tanks simulation
-    // std::vector<Tank> activeTanks = Tank::createTanks(playerNum, playerIds, gridWidth, gridHeight);
     std::map<int, Tank> tankMap =  Tank::createTank(playerNum, clientIds, gridWidth, gridHeight);;
     Tank &myTank = tankMap[clientId];
 
@@ -588,11 +628,20 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
         }
         renderTank(gridWin, tank);
     }
+    playerNum = tankMap.size();
 
     // game loop
     int lastKey = -1; // track the last key
     while (loopRunning) {
-        if (playerNum == 1 && myTank.getHP() > 0) {
+
+        // server side: playernum count simulation
+        int tmpPlayerNum = playerNum;
+        for(auto &[tankId,tank]: tankMap){
+            if(!tank.IsAlive()){
+                tmpPlayerNum--;
+            }
+        }
+        if (tmpPlayerNum == 1 && myTank.getHP() > 0) { // test only(reajust after server side implementation)
             state = GameState::WinScreen;
             loopRunning = false;
             break;
@@ -601,6 +650,8 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
             loopRunning = false;
             break;
         }
+        // end of simulation
+
         int ch = wgetch(gridWin);
         if (ch != ERR) {lastKey = ch;}
 
@@ -643,7 +694,7 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
                     break;
                 }
                 case 'q': {
-                    state = GameState::TieScreen;
+                    state = GameState::WinScreen;
                     loopRunning = false;
                     break;
                 }
@@ -656,7 +707,7 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
             werase(gridWin);
             renderStaticObjects(gridWin, staticObjects);
             setlocale(LC_ALL, "");
-            drawCustomBorder(gridWin);
+            drawCustomBorder1(gridWin);
 
             for(auto &[tankId,tank]: tankMap){
                 if(tank.getHP() > 0){
@@ -686,12 +737,12 @@ void drawWinScreen(WINDOW* win) {
     getmaxyx(win, maxY, maxX);
 
     const wchar_t* winArt[] = {
-        L"██╗   ██╗ ██████╗ ██╗███╗   ██╗",
-        L"██║   ██║██╔═══██╗██║████╗  ██║",
-        L"██║   ██║██║   ██║██║██╔██╗ ██║",
-        L"╚██╗ ██╔╝██║   ██║██║██║╚██╗██║",
-        L" ╚████╔╝ ╚██████╔╝██║██║ ╚████║",
-        L"  ╚═══╝   ╚═════╝ ╚═╝╚═╝  ╚═══╝"
+        L"██╗    ██╗██╗███╗   ██╗",
+        L"██║    ██║██║████╗  ██║",
+        L"██║ █╗ ██║██║██╔██╗ ██║",
+        L"██║███╗██║██║██║╚██╗██║",
+        L"╚███╔███╔╝██║██║ ╚████║",
+        L" ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝"
     };
 
     int artWidth = wcslen(winArt[0]);
