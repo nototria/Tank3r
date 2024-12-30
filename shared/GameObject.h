@@ -172,8 +172,8 @@ private:
     Direction direction;                                                            
     int color;
     int hp;
+    int id;
     bool isAlive;
-    std::string id;
     std::string name;
     std::vector<Bullet> bullets;
 
@@ -189,8 +189,8 @@ public:
     }
 
     // Constructor
-    Tank(int x, int y, Direction dir = Direction::Up, int color = COLOR_BLUE, int hp = 20, const std::string& name = "Player")
-        : GameObject(x, y, MapObjectType::tank), direction(dir), color(color), hp(hp), isAlive(true), name(name) {}
+    Tank(int x, int y, Direction dir = Direction::Up, int color = COLOR_BLUE, int hp = 20, int id = 0)
+        : GameObject(x, y, MapObjectType::tank), direction(dir), color(color), hp(hp), isAlive(true), id(id) {}
 
     static std::vector<Tank> createTanks(int playerNum, const std::string tankIds[], int gridWidth, int gridHeight) {
         std::vector<Tank> tanks;
@@ -227,9 +227,9 @@ public:
     void setName(const std::string& newName) { name = newName; }
     std::string getName() const { return name; }
 
-    void setId(const std::string& newId) { id = newId; }
+    void setId(const int& newId) { id = newId; }
 
-    std::string getId() const { return id; }
+    int getId() const { return id; }
 
     void setColor(const int& newColor) { color = newColor; }
     int getColor() { return color; }
