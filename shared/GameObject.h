@@ -192,7 +192,7 @@ public:
     Tank(int x, int y, Direction dir = Direction::Up, int color = COLOR_BLUE, int hp = 20, int id = 0)
         : GameObject(x, y, MapObjectType::tank), direction(dir), color(color), hp(hp), isAlive(true), id(id) {}
 
-    static std::vector<Tank> createTanks(int playerNum, const std::string tankIds[], int gridWidth, int gridHeight) {
+    static std::vector<Tank> createTanks(int playerNum, const int tankIds[], int gridWidth, int gridHeight) {
         std::vector<Tank> tanks;
         std::vector<std::pair<int, int>> corners = {
         {1, 1}, {1, gridHeight - 2}, {gridWidth - 2, gridHeight - 2}, {gridWidth - 2, 1}};
