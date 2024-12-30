@@ -5,8 +5,10 @@
 #include<sys/socket.h>
 #include<netinet/in.h>
 #include<unistd.h>
+#include<map>
 #include"../shared/GameUtils.hpp"
 #include"../shared/GameObject.h"
+#include"../shared/map_generator.cpp"
 struct StartParam{
     GameServer *obj_ptr;
     int room_id;
@@ -126,9 +128,6 @@ void GameServer::start_game(const int room_id){
     }
 
     room_mgr.start_game(room_id);
-    for(const auto &client_id:room_mgr.get_clients(room_id)){
-        cli_mgr.start_game(client_id);
-    }
 
     auto *ptr=new StartParam(this,room_id);
     pthread_t tid;
@@ -265,5 +264,29 @@ void *GameServer::game_loop(void *obj_ptr){
     auto &self=*((StartParam*)obj_ptr)->obj_ptr;
     int room_id=((StartParam*)obj_ptr)->room_id;
     delete (StartParam*)obj_ptr;
+
+    //generate map
+    std::vector<MapObject> staticObjects = generateMap(
+        SCREEN_WIDTH,SCREEN_HEIGHT,
+        self.room_mgr.get_map_seed(room_id)
+    );
+    std::vector<std::vector<MapObject>> grid(
+        SCREEN_WIDTH,std::vector<MapObject>(SCREEN_HEIGHT)
+    );
+    for(auto &item:staticObjects){
+        grid[item.getX()][item.getY()]=item;
+    }
+
+    GameTimer timer(0.128);
+
+    char udp_send_buffer[1024];
+    
+    bool loopRunning=true;
+    while(loopRunning){
+        if(timer.shouldUpdate()){
+            
+        }
+    }
+
     return NULL;
 }
