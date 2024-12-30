@@ -192,14 +192,14 @@ public:
     Tank(int x, int y, Direction dir = Direction::Up, int color = COLOR_BLUE, int hp = 20, const std::string& name = "Player")
         : GameObject(x, y, MapObjectType::tank), direction(dir), color(color), hp(hp), isAlive(true), name(name) {}
 
-    static std::vector<Tank> createTanks(int playerNum, const std::string remotePlayerNames[], int gridWidth, int gridHeight) {
+    static std::vector<Tank> createTanks(int playerNum, const std::string remoteTankIds[], int gridWidth, int gridHeight) {
         std::vector<Tank> tanks;
         std::vector<std::pair<int, int>> corners = {
         {1, 1}, {1, gridHeight - 2}, {gridWidth - 2, gridHeight - 2}, {gridWidth - 2, 1}};
 
         for (int i = 0; i < playerNum; ++i) {
             // Use player name from remotePlayerNames and create a tank for each player
-            tanks.emplace_back(corners[i].first, corners[i].second, Direction::Down, COLOR_BLUE, 20, remotePlayerNames[i]);
+            tanks.emplace_back(corners[i].first, corners[i].second, Direction::Down, COLOR_BLUE, 20, remoteTankIds[i]);
         }
 
         return tanks;
