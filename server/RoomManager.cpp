@@ -26,7 +26,7 @@ bool RoomManager::join_room(const int client_id, int &room_id){
     //if room_id < 0, then random match
     if(room_id<0){
         std::vector<int> wait_rooms, empty_rooms;
-        for(int i=0;i<MAX_CLIENTS;++i){
+        for(int i=0;i<MAX_ROOMS;++i){
             if(this->room_data_list[i].player_count()==0){
                 empty_rooms.push_back(i);
             }
@@ -38,6 +38,7 @@ bool RoomManager::join_room(const int client_id, int &room_id){
         //try to enter a room that already has some player
         //then try to enter a empty room
         //otherwise, no room is available
+        srand(time(0));
         if(!wait_rooms.empty()) room_id=wait_rooms[random()%wait_rooms.size()];
         else if(!empty_rooms.empty()) room_id=empty_rooms[random()%empty_rooms.size()];
         else return false;
@@ -79,21 +80,30 @@ bool RoomManager::exit_room(const int client_id, const int room_id){
     return 0;
 }
 
+void RoomManager::set_map_seed(const int room_id, const unsigned long seed){
+    auto &room_obj=this->room_data_list[room_id];
+    room_obj.map_seed=seed;
+}
+
+const unsigned long RoomManager::get_map_seed(const int room_id) const{
+    auto &room_obj=this->room_data_list[room_id];
+    return room_obj.map_seed;
+}
+
 void RoomManager::start_game(const int room_id){
     auto &room_obj=this->room_data_list[room_id];
     room_obj.state=RoomData::play;
-    //TODO : create threads to simulate the game and listen to UDP message
 }
 
-int RoomManager::get_host_id(const int room_id){
+int RoomManager::get_host_id(const int room_id) const{
     return room_data_list[room_id].host_id;
 }
 
-int RoomManager::player_count(const int room_id){
+int RoomManager::player_count(const int room_id) const{
     return room_data_list[room_id].player_count();
 }
 
-const std::set<int>& RoomManager::get_clients(const int room_id){
+const std::set<int>& RoomManager::get_clients(const int room_id) const{
     return room_data_list[room_id].client_id_set;
 }
 

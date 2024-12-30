@@ -5,13 +5,33 @@
 #include<sys/socket.h>
 #include<netinet/in.h>
 #include<unistd.h>
+#include<map>
 #include"../shared/GameUtils.hpp"
-GameServer::GameServer(const int &server_fd){
+#include"../shared/GameObject.h"
+#include"../shared/map_generator.cpp"
+struct StartParam{
+    GameServer *obj_ptr;
+    int room_id;
+    StartParam(GameServer *_obj_ptr, const int _room_id): obj_ptr(_obj_ptr), room_id(_room_id){}
+};
+
+GameServer::GameServer(const int &server_fd, const int &udp_fd){
     this->client_count=0;
     //init pollfd list
     this->pollfd_list[MAX_CLIENTS].fd=server_fd;
     this->pollfd_list[MAX_CLIENTS].events=POLLRDNORM;
     for(int i=0;i<MAX_CLIENTS;++i) this->pollfd_list[i].fd=-1;
+
+    //udp_sock_fd
+    this->udp_sock_fd=udp_fd;
+
+    //init mutex
+    cli_mgr_mutex=PTHREAD_MUTEX_INITIALIZER;
+    room_mgr_mutex=PTHREAD_MUTEX_INITIALIZER;
+    for(int i=0;i<MAX_CLIENTS;++i){
+        input_buffer_mutex[i]=PTHREAD_MUTEX_INITIALIZER;
+        client_udp_addr_mutex[i]=PTHREAD_MUTEX_INITIALIZER;
+    }
 }
 
 inline bool GameServer::is_full() const{
@@ -30,6 +50,10 @@ void GameServer::add_client(const int client_fd){
             //send client_id to client
             snprintf(send_buffer,1024,"%s\n",id2str(i));
             write(client_fd,send_buffer,5);
+            //store cli addr
+            socklen_t addrlen;
+            getpeername(client_fd,(struct sockaddr*)this->client_udp_addr+i,&addrlen);
+            this->client_udp_addr[i].sin_port=UDP_PORT;
             return;
         }
     }
@@ -91,7 +115,27 @@ void GameServer::exit_room(const int idx){
 }
 
 void GameServer::start_game(const int room_id){
+    //generate message
+    //start,player_count\nclient_id,user_name\nclient_id,user_name\n...
+    snprintf(send_buffer,1024,"start,%d\n",room_mgr.player_count(room_id));
+    int str_idx=strlen(send_buffer);
+    for(const auto &client_id:room_mgr.get_clients(room_id)){
+        const auto &user_name=cli_mgr.get_user_name(client_id);
+        snprintf(send_buffer+str_idx,1024-str_idx,"%s,%s\n",id2str(client_id),user_name.c_str());
+        str_idx+=(6+user_name.size());
+    }
+    srand(time(0));
+    room_mgr.set_map_seed(room_id,(unsigned long)random());
+    snprintf(send_buffer+str_idx,1024-str_idx,"seed,%lu\n",room_mgr.get_map_seed(room_id));
+    for(const auto &client_id:room_mgr.get_clients(room_id)){
+        write(pollfd_list[client_id].fd,send_buffer,strlen(send_buffer));
+    }
 
+    room_mgr.start_game(room_id);
+
+    auto *ptr=new StartParam(this,room_id);
+    pthread_t tid;
+    pthread_create(&tid,NULL,GameServer::game_loop,(void*)ptr);
 }
 
 void GameServer::recv_connection(){
@@ -163,8 +207,8 @@ void GameServer::process_commands(const int idx){
     }
 }
 
-void GameServer::listen(){
-    std::cout<<"call listen"<<std::endl;
+void GameServer::tcp_listen(){
+    std::cout<<"call tcp_listen"<<std::endl;
     while(true){
         int poll_result=poll(this->pollfd_list,1+MAX_CLIENTS,-1);
         std::cout<<"poll"<<std::endl;
@@ -178,4 +222,71 @@ void GameServer::listen(){
         cli_mgr.check_state();
         room_mgr.check_state();
     }
+}
+
+void* GameServer::udp_listen(void *obj_ptr){
+    std::cout<<"call udp_listen"<<std::endl;
+    pthread_detach(pthread_self());
+
+    auto &self=*(GameServer*)obj_ptr;
+    struct sockaddr_in udp_addr;
+    socklen_t len;
+
+    while(true){
+        len=sizeof(udp_addr);
+        int n=recvfrom(self.udp_sock_fd,self.udp_recv_buffer,1024,0,(struct sockaddr*)&udp_addr,&len);
+        if(n<0){
+            std::cerr<<"recvfrom error"<<std::endl;
+            exit(1);
+        }
+        if(self.udp_recv_buffer[n]=='\n') self.udp_recv_buffer[n]='\0';//test
+
+        std::cout<<"udp recv: {"<<self.udp_recv_buffer<<"}"<<std::endl;
+        InputStruct tmp(self.udp_recv_buffer);
+        
+        if(tmp.valid && self.cli_mgr.get_state(tmp.client_id)==ClientData::play){
+            pthread_mutex_lock(self.input_buffer_mutex+tmp.client_id);
+            self.input_buffer[tmp.client_id].push(tmp);//need mutex
+            pthread_mutex_unlock(self.input_buffer_mutex+tmp.client_id);
+        }
+    }
+    return NULL;
+}
+
+void GameServer::start_server(){
+    pthread_t tid;
+    pthread_create(&tid,NULL,GameServer::udp_listen,(void*)this);
+    this->tcp_listen();
+}
+
+void *GameServer::game_loop(void *obj_ptr){
+    pthread_detach(pthread_self());
+    auto &self=*((StartParam*)obj_ptr)->obj_ptr;
+    int room_id=((StartParam*)obj_ptr)->room_id;
+    delete (StartParam*)obj_ptr;
+
+    //generate map
+    std::vector<MapObject> staticObjects = generateMap(
+        SCREEN_WIDTH,SCREEN_HEIGHT,
+        self.room_mgr.get_map_seed(room_id)
+    );
+    std::vector<std::vector<MapObject>> grid(
+        SCREEN_WIDTH,std::vector<MapObject>(SCREEN_HEIGHT)
+    );
+    for(auto &item:staticObjects){
+        grid[item.getX()][item.getY()]=item;
+    }
+
+    GameTimer timer(0.128);
+
+    char udp_send_buffer[1024];
+    
+    bool loopRunning=true;
+    while(loopRunning){
+        if(timer.shouldUpdate()){
+            
+        }
+    }
+
+    return NULL;
 }

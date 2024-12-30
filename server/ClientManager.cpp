@@ -47,7 +47,7 @@ void ClientManager::exit_room(const int client_id){
 }
 
 void ClientManager::start_game(const int client_id){
-
+    client_data_list[client_id].state=ClientData::play;
 }
 
 const ClientData::State& ClientManager::get_state(const int client_id) const{
