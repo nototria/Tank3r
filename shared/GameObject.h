@@ -173,7 +173,7 @@ private:
     int color;
     int hp;
     bool isAlive;
-    std::string clientId;
+    std::string id;
     std::string name;
     std::vector<Bullet> bullets;
 
@@ -227,9 +227,9 @@ public:
     void setName(const std::string& newName) { name = newName; }
     std::string getName() const { return name; }
 
-    void setClientId(const std::string& newClientId) { clientId = newClientId; }
+    void setId(const std::string& newId) { id = newId; }
 
-    std::string getClientId() const { return clientId; }
+    std::string getId() const { return id; }
 
     void setColor(const int& newColor) { color = newColor; }
     int getColor() { return color; }
