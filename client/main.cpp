@@ -1,67 +1,50 @@
+#include <map>
 #include <ncurses.h>
 #include "../shared/GameObject.h"
 #include "../shared/map_generator.cpp"
 #include "../client/connect.cpp"
 
 // server side
-void checkBulletTankCollisions(std::vector<Tank>& tanks) {
-    for (Tank& shooterTank : tanks) {
-        std::vector<Bullet>& bullets = shooterTank.getBullets();
-
-        for (auto bulletIt = bullets.begin(); bulletIt != bullets.end();) {
+void checkBulletTankCollisions(std::map<int,Tank>& tanksMap) {
+    for (auto& [id, tank] : tanksMap) {
+        std::vector<Bullet>& bullets = tank.getBullets();
+        for (auto it = bullets.begin(); it != bullets.end();) {
             bool collisionDetected = false;
+            if (!it->isActive()) {
+                it = bullets.erase(it);
+                continue;
+            }
 
-            // Check this bullet against all other tanks
-            for (Tank& targetTank : tanks) {
-                // Skip self or dead tanks
-                if (shooterTank.getName() == targetTank.getName() || !targetTank.IsAlive()) continue;
-
-                if (bulletIt->isActive() &&
-                    bulletIt->getX() == targetTank.getX() &&
-                    bulletIt->getY() == targetTank.getY()) {
-                    // Collision detected
+            int x = it->getX();
+            int y = it->getY();
+            for (auto& [id2, tank2] : tanksMap) {
+                if (id == id2 || !tank2.IsAlive()) continue;
+                if (tank2.getX() == x && tank2.getY() == y) {
                     collisionDetected = true;
-
-                    // Apply damage to the target tank
-                    int newHP = targetTank.getHP() - 1; // Example: reduce HP by 1
-                    targetTank.setHP(newHP);
-
-                    // Log collision (optional)
-                    // std::cout << "Bullet from '" << shooterTank.getName()
-                    //           << "' hit '" << targetTank.getName()
-                    //           << "'. Remaining HP: " << newHP << std::endl;
-
-                    // Break to prevent multiple collisions for the same bullet
+                    tank2.setHP(tank2.getHP() - 1);
+                    it = bullets.erase(it);
                     break;
                 }
             }
-
-            // Remove the bullet if it collided, otherwise move to the next one
-            if (collisionDetected) {
-                bulletIt = bullets.erase(bulletIt);
-            } else {
-                ++bulletIt;
+            if (!collisionDetected) {
+                ++it;
             }
         }
     }
 }
 
-void handleBulletCollisions(std::vector<Tank>& tanks) {
-    for (Tank& tank : tanks) {
+void handleBulletCollisions(std::map<int,Tank>& tanksMap) {
+    auto checkCollisionWithBullet = [](Bullet& bullet1, Bullet& bullet2) {
+        return bullet1.getX() == bullet2.getX() && bullet1.getY() == bullet2.getY();
+    };
+    for(auto& [id, tank] : tanksMap) {
         std::vector<Bullet>& bullets = tank.getBullets();
-
-        // Check collision of each bullet with bullets from other tanks
-        for (Tank& otherTank : tanks) {
-            if (&tank == &otherTank) continue; // Skip the same tank
-
-            std::vector<Bullet>& otherBullets = otherTank.getBullets();
-            for (auto it1 = bullets.begin(); it1 != bullets.end(); ++it1) {
-                for (auto it2 = otherBullets.begin(); it2 != otherBullets.end(); ++it2) {
-                    if (it1->checkCollisionWithBullet(*it2)) {
-                        // Deactivate both bullets
-                        it1->setActive(false);
-                        it2->setActive(false);
-                    }
+        for(auto it1 = bullets.begin(); it1 != bullets.end(); ++it1) {
+            for(auto it2 = bullets.begin(); it2 != bullets.end(); ++it2) {
+                if(it1 == it2) continue;
+                if(checkCollisionWithBullet(*it1, *it2)) {
+                    it1->setActive(false);
+                    it2->setActive(false);
                 }
             }
         }
@@ -566,19 +549,23 @@ void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId,
     }
 }
 
-void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObject>& staticObjects, GameState& state, const std::string& username, int playerNum, std::string PlayerNames[]) {
+void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObject>& staticObjects, GameState& state, const int& clientId, int playerNum, std::map<int,std::string>&id2Names) {
     // status windows
     int startX = (COLS - gridWidth) / 2, startY = (LINES - gridHeight) / 2;
-    WINDOW* StatusWin[playerNum];
-    StatusWin[0] = newwin(statusBlockHeight, statusBlockWidth, startY, startX - statusBlockWidth);
+    std::map<int, WINDOW*> StatusWin;
+    std::vector<int> clientIds;
+    for(auto &[id,_]: id2Names){
+        clientIds.push_back(id);
+    }
+    StatusWin[clientIds[0]] = newwin(statusBlockHeight, statusBlockWidth, startY, startX - statusBlockWidth);
     if (playerNum >= 2) {
-        StatusWin[1] = newwin(statusBlockHeight, statusBlockWidth, startY, startX + gridWidth);
+        StatusWin[clientIds[1]] = newwin(statusBlockHeight, statusBlockWidth, startY, startX + gridWidth);
     }
     if (playerNum >= 3) {
-        StatusWin[2] = newwin(statusBlockHeight, statusBlockWidth, startY + statusBlockHeight, startX - statusBlockWidth);
+        StatusWin[clientIds[2]] = newwin(statusBlockHeight, statusBlockWidth, startY + statusBlockHeight, startX - statusBlockWidth);
     }
     if (playerNum >= 4) {
-        StatusWin[3] = newwin(statusBlockHeight, statusBlockWidth, startY + statusBlockHeight, startX + gridWidth);
+        StatusWin[clientIds[3]] = newwin(statusBlockHeight, statusBlockWidth, startY + statusBlockHeight, startX + gridWidth);
     }
     // default values set
     keypad(gridWin, TRUE);
@@ -588,20 +575,18 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
     bool loopRunning = true;
 
     //remote tanks simulation
-    PlayerNames[0] = username;
-    PlayerNames[1] = "Player2";
-    PlayerNames[2] = "Player3";
-    PlayerNames[3] = "Player4";
+    // std::vector<Tank> activeTanks = Tank::createTanks(playerNum, playerIds, gridWidth, gridHeight);
+    std::map<int, Tank> tankMap =  Tank::createTank(playerNum, clientIds, gridWidth, gridHeight);;
+    Tank &myTank = tankMap[clientId];
 
-    // create tanks by PlayerNames
-    std::vector<Tank> Tanks = Tank::createTanks(playerNum, PlayerNames, gridWidth, gridHeight);
-    std::vector<Tank> activeTanks = Tank::createTanks(playerNum, PlayerNames, gridWidth, gridHeight);
-    for(int i = 0; i < playerNum; i++){
-        activeTanks[i].setColor(i+1);
-    }
-    Tank &myTank = activeTanks[0];
-    for(int i = 0; i < playerNum; i++){
-        renderTank(gridWin, activeTanks[i]);
+    for(auto &[tankId,tank]: tankMap){
+        tank.setName(id2Names[tankId]);
+        if(tankId != clientId){
+            tank.setColor(COLOR_RED);
+        }else{
+            tank.setColor(COLOR_GREEN);
+        }
+        renderTank(gridWin, tank);
     }
 
     // game loop
@@ -673,25 +658,25 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
             setlocale(LC_ALL, "");
             drawCustomBorder(gridWin);
 
-            for (int i = 0; i < playerNum; i++) {
-                if (activeTanks[i].getHP() > 0) {
-                    activeTanks[i].updateBullets(gridWidth, gridHeight, staticObjects);
-                    handleBulletCollisions(activeTanks); // TBD: server side
-                    checkBulletTankCollisions(activeTanks); // TBD: server side
-                    renderTank(gridWin, activeTanks[i]);
+            for(auto &[tankId,tank]: tankMap){
+                if(tank.getHP() > 0){
+                    tank.updateBullets(gridWidth, gridHeight, staticObjects);
+                    handleBulletCollisions(tankMap);
+                    checkBulletTankCollisions(tankMap);
+                    renderTank(gridWin, tank);
                 }
-                renderPlayerInfo(StatusWin[i], activeTanks[i].getName(), activeTanks[i].getHP(), activeTanks[i].getColor());
-                wrefresh(StatusWin[i]);
+                renderPlayerInfo(StatusWin[tankId], tank.getName(), tank.getHP(), tank.getColor());
+                wrefresh(StatusWin[tankId]);
             }
             wrefresh(gridWin);
         }
     }
 
     // Cleanup
-    for(int i = 0; i < playerNum; i++){
-        werase(StatusWin[i]);
-        wrefresh(StatusWin[i]);
-        delwin(StatusWin[i]);
+    for(auto &client: clientIds){
+        werase(StatusWin[client]);
+        wrefresh(StatusWin[client]);
+        delwin(StatusWin[client]);
     }
 }
 
@@ -853,15 +838,19 @@ void drawTieScreen(WINDOW* win) {
 
 int main() {
     // TBD: get other players info from server (playerNum)
-    int playerNum = 4, width, height;
+    int playerNum = 4;
     std::string PlayerNames[playerNum];
-    WINDOW *titleWin, *inputWin, *roomWin,*gameWin, *endWin;
-    GameState state;
+    std::string ClientIds[playerNum];
+    std::map<int, std::string> id2Names;
     std::string username="";
     std::string roomId="";
     int connfd = -1;
     int clientId = -1;
+
+    WINDOW *titleWin, *inputWin, *roomWin,*gameWin, *endWin;
+    GameState state;
     suppress_stderr();
+    int width, height;
     initGame(width, height, titleWin, inputWin, roomWin, gameWin, endWin, state);
 
     bool running = true;
@@ -892,8 +881,14 @@ int main() {
             case GameState::GameLoop: {
                 // TBD: Generate static objects
                 std::vector<MapObject> staticObjects = generateMap(width, height, 5269);
+                std::map<int, std::string> id2Names = {
+                    {1111, "it's me"},
+                    {2222, "Player2"},
+                    {3333, "Player3"},
+                    {4444, "Player4"}
+                };
                 // TBD: get other players info from server (PlayerNames)
-                gameLoop(gameWin, width, height, staticObjects, state, username, playerNum, PlayerNames);
+                gameLoop(gameWin, width, height, staticObjects, state, 4444, 4, id2Names);
                 break;
             }
 

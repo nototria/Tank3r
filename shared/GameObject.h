@@ -10,6 +10,7 @@
 #include <chrono>
 #include <unistd.h>
 #include <ncurses.h>
+#include <map>
 
 #define SCREEN_WIDTH 100
 #define SCREEN_HEIGHT 40
@@ -189,20 +190,21 @@ public:
     }
 
     // Constructor
-    Tank(int x, int y, Direction dir = Direction::Up, int color = COLOR_BLUE, int hp = 20, int id = 0)
+    Tank() : GameObject(0, 0, MapObjectType::tank), direction(Direction::Up), color(COLOR_GREEN), hp(20), isAlive(false), id(-1) {}
+    Tank(int x, int y, Direction dir = Direction::Up, int color = COLOR_GREEN, int hp = 20, int id = 0)
         : GameObject(x, y, MapObjectType::tank), direction(dir), color(color), hp(hp), isAlive(true), id(id) {}
 
-    static std::vector<Tank> createTanks(int playerNum, const int tankIds[], int gridWidth, int gridHeight) {
-        std::vector<Tank> tanks;
+    static std::map<int, Tank> createTank(int playerNum, const std::vector<int> tankIds, int gridWidth, int gridHeight) {
+        std::map<int, Tank> tankMap;
         std::vector<std::pair<int, int>> corners = {
-        {1, 1}, {1, gridHeight - 2}, {gridWidth - 2, gridHeight - 2}, {gridWidth - 2, 1}};
+            {1, 1}, {gridWidth - 2, 1},{1, gridHeight - 2}, {gridWidth - 2, gridHeight - 2}};
 
         for (int i = 0; i < playerNum; ++i) {
-            // Use player name from remotePlayerNames and create a tank for each player
-            tanks.emplace_back(corners[i].first, corners[i].second, Direction::Down, COLOR_BLUE, 20, tankIds[i]);
+            // Create a Tank for each clientId and add to the map
+            tankMap[tankIds[i]] = Tank(corners[i].first, corners[i].second, Direction::Down, COLOR_GREEN, 20, tankIds[i]);
         }
 
-        return tanks;
+        return tankMap;
     }
 
     // Tank own functions
