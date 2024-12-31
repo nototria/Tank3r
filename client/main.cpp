@@ -514,7 +514,7 @@ void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId,
             } else {
                 wattron(win, COLOR_PAIR(3));
             }
-            mvwprintw(win, optionStartY + i, optionStartX, "%s", options[i]);
+            mvwprintw(win, optionStartY + i, optionStartX, "%s", options[i].c_str());
             wattroff(win, COLOR_PAIR(3) | A_REVERSE);
         }
         wrefresh(win);
