@@ -259,11 +259,21 @@ void GameServer::start_server(){
     this->tcp_listen();
 }
 
-void *GameServer::game_loop(void *obj_ptr){
+void* GameServer::game_loop(void *obj_ptr){
     pthread_detach(pthread_self());
     auto &self=*((StartParam*)obj_ptr)->obj_ptr;
     int room_id=((StartParam*)obj_ptr)->room_id;
-    delete (StartParam*)obj_ptr;
+    delete (StartParam*)obj_ptr;//delete dummy obj only for passing parameter to this thread
+
+    int player_count=self.room_mgr.player_count(room_id);
+    int client_id_list[4], idx;
+    idx=0;
+    std::map<int,int> client_id2idx;
+    for(auto &client_id:self.room_mgr.get_clients(room_id)){
+        client_id_list[idx]=client_id;
+        client_id2idx[client_id]=idx;
+        ++idx;
+    }
 
     //generate map
     std::vector<MapObject> staticObjects = generateMap(
@@ -277,13 +287,81 @@ void *GameServer::game_loop(void *obj_ptr){
         grid[item.getX()][item.getY()]=item;
     }
 
-    GameTimer timer(0.128);
+    std::string client_id_list_str[4];
+    for(idx=0;idx<player_count;++idx){
+        client_id_list_str[idx++]=id2str(client_id_list[idx]);
+    }
+    auto tanks=Tank::createTanks(
+        self.room_mgr.player_count(room_id),
+        client_id_list_str,
+        SCREEN_WIDTH,SCREEN_HEIGHT
+    );
 
+    GameTimer timer(0.128);
     char udp_send_buffer[1024];
     
     bool loopRunning=true;
     while(loopRunning){
-        if(timer.shouldUpdate()){
+        if(!timer.shouldUpdate()) continue;
+        for(idx=0;idx<player_count;++idx){
+            int client_id=client_id_list[idx];
+            //handle client input and update objects
+            pthread_mutex_lock(self.input_buffer_mutex+client_id);
+            auto &in_buffer=self.input_buffer[client_id];
+            while(!in_buffer.empty()){
+                switch(in_buffer.front().key){
+                case 'w':
+                    tanks[idx].setDirection(Direction::Up);
+                    int nextY = tanks[idx].getY() - 1;
+                    if (nextY > 0 && !tanks[idx].checkTankCollision(tanks[idx].getX(), nextY, staticObjects)){
+                        tanks[idx].setY(nextY);
+                    }
+                    break;
+                case 'a':
+                    tanks[idx].setDirection(Direction::Left);
+                    int nextX = tanks[idx].getX() - 1;
+                    if (nextX > 0 && !tanks[idx].checkTankCollision(nextX, tanks[idx].getY(), staticObjects)){
+                        tanks[idx].setX(nextX);
+                    }
+                    break;
+                case 's':
+                    tanks[idx].setDirection(Direction::Down);
+                    int nextY = tanks[idx].getY() + 1;
+                    if (nextY < SCREEN_HEIGHT - 1 && !tanks[idx].checkTankCollision(tanks[idx].getX(), nextY, staticObjects)){
+                        tanks[idx].setY(nextY);
+                    }
+                    break;
+                case 'd':
+                    tanks[idx].setDirection(Direction::Right);
+                    int nextX = tanks[idx].getX() + 1;
+                    if (nextX < SCREEN_WIDTH - 1 && !tanks[idx].checkTankCollision(nextX, tanks[idx].getY(), staticObjects)){
+                        tanks[idx].setX(nextX);
+                    }
+                    break;
+                case ' ':
+                    tanks[idx].fireBullet();
+                    break;
+                default: break;
+                }
+                //generate msg
+                //[uf],client_id,x,y,direction,seq
+                snprintf(udp_send_buffer,1024,"u,%s,%d,%d,%d,%d",
+                    id2str(client_id),tanks[idx].getX(),tanks[idx].getY(),
+                    tanks[idx].getDirection(),in_buffer.front().seq
+                );
+                if(in_buffer.front().key==' ') udp_send_buffer[0]='f';
+                //send update to every client
+                for(int i=0, len=strlen(udp_send_buffer);i<player_count;++i){
+                    sendto(
+                        self.udp_sock_fd,
+                        udp_send_buffer,len,
+                        0,(struct sockaddr*)(self.client_udp_addr+client_id_list[i]),
+                        sizeof(self.client_udp_addr[client_id_list[i]])
+                    );
+                }
+                in_buffer.pop();
+            }
+            pthread_mutex_unlock(self.input_buffer_mutex+client_id);
             
         }
     }
