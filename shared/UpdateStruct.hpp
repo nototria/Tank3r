@@ -36,7 +36,7 @@ struct UpdateStruct{
 
         str=tmp2;
         sep_str(str,tmp1,tmp2,COMMAND_SEP);
-        if(this->type='h'){
+        if(this->type=='h'){
             if(!is_int(tmp1) || std::stoi(tmp1)<0){
                 valid=false;
                 return;

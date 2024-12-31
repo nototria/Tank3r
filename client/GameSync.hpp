@@ -89,32 +89,33 @@ void GameSync::update_tank(std::map<int,Tank> &tanks, std::vector<MapObject> &st
 
     int preX = last_ack.x;
     int preY = last_ack.y;
+    int nextX, nextY;
     for(auto &item:input_queue){
         switch(item.key){
         case 'w':
             this_tank.setDirection(Direction::Up);
-            int nextY=preY-1;
+            nextY=preY-1;
             if(nextY>0 && !this_tank.checkTankCollision(preX,nextY,staticObjects)){
                 this_tank.setY(nextY);
             }
             break;
         case 'a':
             this_tank.setDirection(Direction::Left);
-            int nextX=preX-1;
+            nextX=preX-1;
             if(nextX>0 && !this_tank.checkTankCollision(nextX,preY,staticObjects)){
                 this_tank.setX(nextX);
             }
             break;
         case 's':
             this_tank.setDirection(Direction::Down);
-            int nextY=preY+1;
+            nextY=preY+1;
             if(nextY<SCREEN_HEIGHT-1 && !this_tank.checkTankCollision(preX,nextY,staticObjects)){
                 this_tank.setY(nextY);
             }
             break;
         case 'd':
             this_tank.setDirection(Direction::Right);
-            int nextX=preX+1;
+            nextX=preX+1;
             if(nextX<SCREEN_WIDTH-1 && !this_tank.checkTankCollision(nextX,preY,staticObjects)){
                 this_tank.setX(nextX);
             }
@@ -145,9 +146,11 @@ void* GameSync::udp_listen(void *obj_ptr){
             }
         }
     }
+    return NULL;
 }
 
 void GameSync::start_inGame_listen(){
+    write(udp_fd,id2str(this->my_client_id),4);
     this->is_running=true;
     pthread_t tid;
     pthread_create(&tid,NULL,udp_listen,this);

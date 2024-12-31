@@ -53,7 +53,6 @@ void GameServer::add_client(const int client_fd){
             //store cli addr
             socklen_t addrlen;
             getpeername(client_fd,(struct sockaddr*)this->client_udp_addr+i,&addrlen);
-            this->client_udp_addr[i].sin_port=UDP_PORT;
             return;
         }
     }
@@ -250,12 +249,25 @@ void* GameServer::udp_listen(void *obj_ptr){
         self.udp_recv_buffer[n-1]='\0';
 
         std::cout<<"udp recv: {"<<self.udp_recv_buffer<<"}"<<std::endl;
-        InputStruct tmp(self.udp_recv_buffer);
-        
-        if(tmp.valid && self.cli_mgr.get_state(tmp.client_id)==ClientData::play){
-            pthread_mutex_lock(self.input_buffer_mutex+tmp.client_id);
-            self.input_buffer[tmp.client_id].push(tmp);//need mutex
-            pthread_mutex_unlock(self.input_buffer_mutex+tmp.client_id);
+
+        if(strlen(self.udp_recv_buffer)==4){
+            int tmp_id=std::stoi(self.udp_recv_buffer);
+            //check client_id and addr
+            if(
+                tmp_id>=0 && tmp_id<MAX_CLIENTS &&
+                self.client_udp_addr[std::stoi(self.udp_recv_buffer)].sin_addr.s_addr==udp_addr.sin_addr.s_addr
+            ){
+                self.client_udp_addr[std::stoi(self.udp_recv_buffer)].sin_port=udp_addr.sin_port;
+                std::cout<<"set client"<<self.udp_recv_buffer<<" udp port = "<<ntohs(udp_addr.sin_port)<<std::endl;
+            }
+        }
+        else{
+            InputStruct tmp(self.udp_recv_buffer);            
+            if(tmp.valid && self.cli_mgr.get_state(tmp.client_id)==ClientData::play){
+                pthread_mutex_lock(self.input_buffer_mutex+tmp.client_id);
+                self.input_buffer[tmp.client_id].push(tmp);//need mutex
+                pthread_mutex_unlock(self.input_buffer_mutex+tmp.client_id);
+            }
         }
     }
     return NULL;
@@ -345,6 +357,7 @@ void* GameServer::game_loop(void *obj_ptr){
                     this_tank.getDirection(),in_buffer.front().seq
                 );
                 if(in_buffer.front().key==' ') udp_send_buffer[0]='f';
+                std::cout<<"send update msg: "<<udp_send_buffer<<std::endl;
                 //send update to every client
                 for(int i=0, len=strlen(udp_send_buffer);i<player_count;++i){
                     sendto(
