@@ -37,12 +37,11 @@ public:
 };
 
 void GameSync::send_input(char key){
-    input_queue.emplace_back(InputStruct{key,this->my_client_id,seq++});
+    if(key!=' ') input_queue.emplace_back(InputStruct{key,this->my_client_id,seq++});
     write(udp_fd,input_queue.back().to_str().c_str(),input_queue.back().to_str().size());
 }
 
 void GameSync::update_tank(std::map<int,Tank> &tanks, std::vector<MapObject> &staticObjects){
-    //get last server ack
     pthread_mutex_lock(&this->update_mutex);
     while(!update_queue.empty()){
         switch(update_queue.front().type){
@@ -82,10 +81,9 @@ void GameSync::update_tank(std::map<int,Tank> &tanks, std::vector<MapObject> &st
     //apply client side prediction
     auto &this_tank=tanks[this->my_client_id];
     //discard old inputs
-    while(input_queue.front().seq!=last_ack.seq){
+    while(!input_queue.empty() && input_queue.front().seq<=last_ack.seq){
         input_queue.pop_front();
     }
-    input_queue.pop_back();
 
     int preX = last_ack.x;
     int preY = last_ack.y;
@@ -136,7 +134,6 @@ void* GameSync::udp_listen(void *obj_ptr){
         if(nready<=0) continue;
         if(pollfd_list[0].revents & (POLLRDNORM | POLLERR)){
             int n=read(pollfd_list[0].fd,recv_buffer,1024);
-            if(n>0 && recv_buffer[n-1]=='\n') --n;//test
             recv_buffer[n]='\0';
             UpdateStruct tmp(recv_buffer);
             if(tmp.valid){
@@ -153,6 +150,6 @@ void GameSync::start_inGame_listen(){
     write(udp_fd,id2str(this->my_client_id),4);
     this->is_running=true;
     pthread_t tid;
-    pthread_create(&tid,NULL,udp_listen,this);
+    pthread_create(&tid,NULL,GameSync::udp_listen,this);
 }
 #endif

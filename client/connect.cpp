@@ -74,7 +74,11 @@ char* joinRoom(int sockfd, const char* roomId) {
     if (write(sockfd, msg, strlen(msg)) < 0) return NULL;
 
     char buf[64] = {0};
-    int len = read(sockfd, buf, sizeof(buf) - 1);
+    int len;
+    for(len=0;len<64;++len){
+        if(read(sockfd,buf+len,1)<=0) break;
+        if(buf[len]=='\n') break;
+    }
     buf[len] = '\0';
     if (strncmp(buf, "join,", 5) == 0) {
         return buf + 5;
@@ -165,6 +169,11 @@ int connectUDP(const char* ip, int port) {
         perror("inet_pton");
         close(sockfd);
         return -1;
+    }
+    if(connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr))<0){
+        perror("connect");
+        close(sockfd);
+        exit(1);
     }
     return sockfd;
 }

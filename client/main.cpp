@@ -426,7 +426,7 @@ void RoomMenu(WINDOW* win, GameState& state, std::string& roomId, int& connfd, i
                 switch (selectedOption+1) {
                     case 1:  // Join a room by ID
                         // connect to server
-                        if((connfd = connectToServer("127.0.0.1", SERV_PORT)) == -1){
+                        if((connfd = connectToServer(SERV_IP, SERV_PORT)) == -1){
                             werase(win);
                             mvwprintw(win, optionStartY + 0, optionStartX, "Failed to connect to the server");
                             wrefresh(win);
@@ -439,7 +439,7 @@ void RoomMenu(WINDOW* win, GameState& state, std::string& roomId, int& connfd, i
                         break;
                     case 2:  // Quick Join
                         // connect to server
-                        if((connfd = connectToServer("127.0.0.1", SERV_PORT)) == -1){
+                        if((connfd = connectToServer(SERV_IP, SERV_PORT)) == -1){
                             werase(win);
                             mvwprintw(win, optionStartY + 0, optionStartX, "Failed to connect to the server");
                             wrefresh(win);
@@ -594,7 +594,6 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
         }
         renderTank(gridWin, tank);
     }
-    playerNum = tankMap.size();
 
     //setup udp connection
     int udpfd = connectUDP(SERV_IP, UDP_PORT);

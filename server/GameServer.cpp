@@ -51,7 +51,7 @@ void GameServer::add_client(const int client_fd){
             snprintf(send_buffer,1024,"%s\n",id2str(i));
             write(client_fd,send_buffer,5);
             //store cli addr
-            socklen_t addrlen;
+            socklen_t addrlen=sizeof(client_udp_addr[i]);
             getpeername(client_fd,(struct sockaddr*)this->client_udp_addr+i,&addrlen);
             return;
         }
@@ -131,6 +131,9 @@ void GameServer::start_game(const int room_id){
     }
 
     room_mgr.start_game(room_id);
+    for(auto &client_id:room_mgr.get_clients(room_id)){
+        cli_mgr.start_game(client_id);
+    }
 
     auto *ptr=new StartParam(this,room_id);
     pthread_t tid;
@@ -246,23 +249,24 @@ void* GameServer::udp_listen(void *obj_ptr){
             exit(1);
         }
         if(self.udp_recv_buffer[n-1]=='\n') --n;//test
-        self.udp_recv_buffer[n-1]='\0';
+        self.udp_recv_buffer[n]='\0';
 
         std::cout<<"udp recv: {"<<self.udp_recv_buffer<<"}"<<std::endl;
 
-        if(strlen(self.udp_recv_buffer)==4){
+        if(n==4){
             int tmp_id=std::stoi(self.udp_recv_buffer);
             //check client_id and addr
             if(
                 tmp_id>=0 && tmp_id<MAX_CLIENTS &&
-                self.client_udp_addr[std::stoi(self.udp_recv_buffer)].sin_addr.s_addr==udp_addr.sin_addr.s_addr
+                self.client_udp_addr[tmp_id].sin_addr.s_addr==udp_addr.sin_addr.s_addr
             ){
-                self.client_udp_addr[std::stoi(self.udp_recv_buffer)].sin_port=udp_addr.sin_port;
+                self.client_udp_addr[tmp_id].sin_port=udp_addr.sin_port;
                 std::cout<<"set client"<<self.udp_recv_buffer<<" udp port = "<<ntohs(udp_addr.sin_port)<<std::endl;
             }
         }
         else{
-            InputStruct tmp(self.udp_recv_buffer);            
+            std::cout<<"try to parse udp msg"<<std::endl;
+            InputStruct tmp(self.udp_recv_buffer);
             if(tmp.valid && self.cli_mgr.get_state(tmp.client_id)==ClientData::play){
                 pthread_mutex_lock(self.input_buffer_mutex+tmp.client_id);
                 self.input_buffer[tmp.client_id].push(tmp);//need mutex
@@ -360,12 +364,15 @@ void* GameServer::game_loop(void *obj_ptr){
                 std::cout<<"send update msg: "<<udp_send_buffer<<std::endl;
                 //send update to every client
                 for(int i=0, len=strlen(udp_send_buffer);i<player_count;++i){
-                    sendto(
+                    if(sendto(
                         self.udp_sock_fd,
                         udp_send_buffer,len,
                         0,(struct sockaddr*)(self.client_udp_addr+client_id_list[i]),
                         sizeof(self.client_udp_addr[client_id_list[i]])
-                    );
+                    ) <0){
+                        std::cerr<<"sendto error "<<errno<<std::endl;
+                        //exit(1);
+                    }
                 }
                 in_buffer.pop();
             }
