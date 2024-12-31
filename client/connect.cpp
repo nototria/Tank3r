@@ -5,9 +5,10 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include<sstream>
 #include "../shared/GameParameters.h"
 #include "../shared/GameObject.h"
-
+#include<poll.h>
 
 void suppress_stderr() {
     int fd = open("/dev/null", O_WRONLY);
@@ -95,4 +96,28 @@ bool exitRoom(int sockfd, const char* roomId) {
     }
     close(sockfd);
     return true;
+}
+
+
+void InRoomListen(int sockfd, bool &isHost, bool &startGame, int &playerNum){
+    struct pollfd pollfd_list[1];
+    pollfd_list[0].fd = sockfd;
+    pollfd_list[0].events = POLLRDNORM;
+    char recv_buffer[1024];
+    int nready = poll(pollfd_list, 1, 10);
+    if (nready <= 0) return;
+    //read line
+    int len=0;
+    for(;len<1024;++len){
+        if(read(sockfd,recv_buffer+len,1)<=0) break;
+        if(recv_buffer[len]=='\n') break;
+    }
+    recv_buffer[len]='\0';
+    if(strncmp(recv_buffer,"host,",5)==0){
+        isHost=true;
+    }
+    if(strncmp(recv_buffer,"start,",6)==0){
+        startGame=true;
+        playerNum=atoi(recv_buffer+6);
+    }
 }

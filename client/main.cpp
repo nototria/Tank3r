@@ -495,18 +495,19 @@ void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId,
     mvwprintw(win, roomMsgY, roomMsgX, "%s%s", roomMsg, roomId.c_str());
     wattroff(win, COLOR_PAIR(2) | A_BOLD);
 
-    // Option hints
-    const char* options[] = {
-        isHost ? "Start Game" : "Waiting for the Host to Start...",
-        "Exit Room",
-    };
 
-    int numOptions = sizeof(options) / sizeof(options[0]);
-    int optionStartY = roomMsgY + 3;
-    int optionStartX = (maxX - strlen(options[0])) / 2;
+    std::string options[2]{"", "Exit Room"};
+
+    int numOptions = 2;
+
     int selectedOption = 1;
 
     while (true) {
+        // Option hints
+        options[0]=isHost ? "Start Game" : "Waiting for the Host to Start...";
+        int optionStartY = roomMsgY + 3;
+        int optionStartX = (maxX - options[0].size()) / 2;
+
         for (int i = 0; i < numOptions; ++i) {
             if (i == selectedOption) {
                 wattron(win, COLOR_PAIR(3) | A_REVERSE);
@@ -517,6 +518,9 @@ void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId,
             wattroff(win, COLOR_PAIR(3) | A_REVERSE);
         }
         wrefresh(win);
+        bool flag;
+        int playerNum;
+        InRoomListen(connfd, isHost, flag, playerNum);
         // Handle input
         int ch = wgetch(win);
         switch (ch) {
