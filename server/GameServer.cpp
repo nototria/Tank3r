@@ -259,11 +259,11 @@ void GameServer::start_server(){
     this->tcp_listen();
 }
 
-void *GameServer::game_loop(void *obj_ptr){
+void* GameServer::game_loop(void *obj_ptr){
     pthread_detach(pthread_self());
     auto &self=*((StartParam*)obj_ptr)->obj_ptr;
     int room_id=((StartParam*)obj_ptr)->room_id;
-    delete (StartParam*)obj_ptr;
+    delete (StartParam*)obj_ptr;//delete dummy obj only for passing parameter to this thread
 
     int player_count=self.room_mgr.player_count(room_id);
     int client_id_list[4], idx;
