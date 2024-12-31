@@ -3,6 +3,7 @@
 #include "../shared/GameObject.h"
 #include "../shared/map_generator.cpp"
 #include "../client/connect.cpp"
+#include"GameSync.hpp"
 
 // define
 std::vector<int> checkBulletTankCollisions(std::map<int,Tank>& tanksMap);
@@ -580,7 +581,7 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
     GameTimer timer(0.128); // 7.5 FPS
     bool loopRunning = true;
 
-    //remote tanks simulation
+    //tanks
     std::map<int, Tank> tankMap =  Tank::createTank(playerNum, clientIds, gridWidth, gridHeight);;
     Tank &myTank = tankMap[clientId];
 
@@ -595,8 +596,13 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
     }
     playerNum = tankMap.size();
 
+    //setup udp connection
+    int udpfd = connectUDP(SERV_IP, UDP_PORT);
+    GameSync gameSync(udpfd, clientId, myTank);
+
     // game loop
     int lastKey = -1; // track the last key
+    gameSync.start_inGame_listen();
     while (loopRunning) {
 
         // server side: playernum count simulation
@@ -621,6 +627,7 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
         if (ch != ERR) {lastKey = ch;}
 
         if (timer.shouldUpdate()) {
+            /*
             switch (lastKey) {
                 case ' ': {
                     myTank.fireBullet();
@@ -664,7 +671,20 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
                     break;
                 }
             }
+            */
+            switch (lastKey){
+            case ' ': gameSync.send_input(' ');break;
+            case 'w': gameSync.send_input('w');break;
+            case 's': gameSync.send_input('s');break;
+            case 'a': gameSync.send_input('a');break;
+            case 'd': gameSync.send_input('d');break;
+            case 'q': {
+                loopRunning = false;
+                break;
+            }
+            }
             lastKey = -1;   // Reset last key
+            gameSync.update_tank(tankMap, staticObjects);
 
             // TBD: Check for collision between bullets and tanks
             // TBD: Remote tanks movement retrieval
@@ -895,13 +915,14 @@ int main() {
             }
 
             case GameState::GameLoop: {
-                // TBD: Generate static objects
+                //get other players info from server (PlayerNames)
                 std::map<int, std::string> id2Names;
                 int seed;
                 getStartInfo(connfd, playerNum, id2Names, seed);
+                //Generate static objects
                 std::vector<MapObject> staticObjects = generateMap(width, height, seed);
-                // TBD: get other players info from server (PlayerNames)
                 gameLoop(gameWin, width, height, staticObjects, state, clientId, playerNum, id2Names);
+                close(connfd);
                 break;
             }
 

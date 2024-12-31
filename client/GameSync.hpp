@@ -25,15 +25,19 @@ public:
     GameSync(const int connected_udp_fd, int _client_id, const Tank &this_tank):
         udp_fd(connected_udp_fd),
         my_client_id(_client_id), seq(1),
-        last_ack(_client_id,this_tank) {
+        last_ack(_client_id,this_tank), is_running(false) {
             update_mutex = PTHREAD_MUTEX_INITIALIZER;
         };
     void send_input(char key);
     void update_tank(std::map<int,Tank> &tanks, std::vector<MapObject> &staticObjects);
+    void start_inGame_listen();
+    void stop_inGame_listen(){
+        this->is_running=false;
+    }
 };
 
 void GameSync::send_input(char key){
-    input_queue.emplace_back(InputStruct{key,this->my_client_id,seq});
+    input_queue.emplace_back(InputStruct{key,this->my_client_id,seq++});
     write(udp_fd,input_queue.back().to_str().c_str(),input_queue.back().to_str().size());
 }
 
@@ -127,7 +131,7 @@ void* GameSync::udp_listen(void *obj_ptr){
     pollfd_list[0].events=POLLRDNORM;
     char recv_buffer[1024];
     while(self.is_running){
-        int nready=poll(pollfd_list,1,20);
+        int nready=poll(pollfd_list,1,10);
         if(nready<=0) continue;
         if(pollfd_list[0].revents & (POLLRDNORM | POLLERR)){
             int n=read(pollfd_list[0].fd,recv_buffer,1024);
@@ -143,4 +147,9 @@ void* GameSync::udp_listen(void *obj_ptr){
     }
 }
 
+void GameSync::start_inGame_listen(){
+    this->is_running=true;
+    pthread_t tid;
+    pthread_create(&tid,NULL,udp_listen,this);
+}
 #endif

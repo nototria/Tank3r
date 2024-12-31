@@ -72,8 +72,8 @@ bool RoomManager::exit_room(const int client_id, const int room_id){
         room_obj.host_id=-1;
         return 0;
     }
-    //if the room host exit
-    if(room_obj.host_id==client_id){
+    //if the room host exit when waiting
+    if(room_obj.host_id==client_id && room_obj.state==RoomData::wait){
         room_obj.host_id=*(room_obj.client_id_set.begin());
         return 1;
     }

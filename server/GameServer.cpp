@@ -242,11 +242,12 @@ void* GameServer::udp_listen(void *obj_ptr){
     while(true){
         len=sizeof(udp_addr);
         int n=recvfrom(self.udp_sock_fd,self.udp_recv_buffer,1024,0,(struct sockaddr*)&udp_addr,&len);
-        if(n<0){
+        if(n<=0){
             std::cerr<<"recvfrom error"<<std::endl;
             exit(1);
         }
-        if(self.udp_recv_buffer[n]=='\n') self.udp_recv_buffer[n]='\0';//test
+        if(self.udp_recv_buffer[n-1]=='\n') --n;//test
+        self.udp_recv_buffer[n-1]='\0';
 
         std::cout<<"udp recv: {"<<self.udp_recv_buffer<<"}"<<std::endl;
         InputStruct tmp(self.udp_recv_buffer);

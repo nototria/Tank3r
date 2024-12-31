@@ -149,3 +149,22 @@ void getStartInfo(const int sockfd, const int playerNum, std::map<int,std::strin
     recv_buffer[len]='\0';
     if(strncmp(recv_buffer,"seed,",5)==0) seed=atoi(recv_buffer+5);
 }
+
+int connectUDP(const char* ip, int port) {
+    int sockfd;
+    struct sockaddr_in serv_addr;
+
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        perror("socket");
+        return -1;
+    }
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(port);
+
+    if (inet_pton(AF_INET, ip, &serv_addr.sin_addr) <= 0) {
+        perror("inet_pton");
+        close(sockfd);
+        return -1;
+    }
+    return sockfd;
+}
