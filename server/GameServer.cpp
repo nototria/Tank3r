@@ -198,10 +198,17 @@ void GameServer::process_commands(const int idx){
         //host can start the game
         else if(
             tmp0=="start" && is_int(tmp1) &&
-            std::stoi(tmp1)==cli_mgr.get_room_id(idx) &&
-            room_mgr.player_count(cli_room_id)>1 &&
-            room_mgr.get_host_id(cli_mgr.get_room_id(idx))==idx
-        ) this->start_game(cli_room_id);
+            std::stoi(tmp1)==cli_mgr.get_room_id(idx)
+        ){
+            if(
+                room_mgr.player_count(cli_room_id)>1 &&
+                room_mgr.get_host_id(cli_mgr.get_room_id(idx))==idx
+            ) this->start_game(cli_room_id);
+            else{
+                //send fail to host
+                write(this->pollfd_list[idx].fd,"fail\n",5);
+            }
+        }
         break;
     default: break;
     }
