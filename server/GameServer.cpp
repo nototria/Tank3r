@@ -349,7 +349,11 @@ void* GameServer::game_loop(void *obj_ptr){
                 in_buffer.pop();
             }
             pthread_mutex_unlock(self.input_buffer_mutex+client_id);
-            
+            //update bullets
+            for(auto &[client_id, this_tank]:tanks){
+                if(!this_tank.IsAlive()) continue;
+                this_tank.updateBullets(SCREEN_WIDTH,SCREEN_HEIGHT,staticObjects);
+            }
         }
     }
 
