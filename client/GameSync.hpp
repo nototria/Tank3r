@@ -11,30 +11,112 @@
 class GameSync{
 private:
     std::deque<InputStruct> input_queue;
-    std::deque<UpdateStruct> update_queue;
+    
     pthread_mutex_t update_mutex;
+    std::deque<UpdateStruct> update_queue;
+    UpdateStruct last_ack;
+    
     int udp_fd;
-    int client_id;
+    int my_client_id;
     int seq;
     static void* udp_listen(void *obj_ptr);
     bool is_running;
 public:
-    GameSync(const int connected_udp_fd, int _client_id):
+    GameSync(const int connected_udp_fd, int _client_id, const Tank &this_tank):
         udp_fd(connected_udp_fd),
-        client_id(_client_id), seq(0) {
+        my_client_id(_client_id), seq(1),
+        last_ack(_client_id,this_tank) {
             update_mutex = PTHREAD_MUTEX_INITIALIZER;
         };
     void send_input(char key);
-    void update_tank(std::vector<Tank> &tanks);
+    void update_tank(std::map<int,Tank> &tanks, std::vector<MapObject> &staticObjects);
 };
 
 void GameSync::send_input(char key){
-    input_queue.emplace_back(InputStruct{key,this->client_id,seq});
+    input_queue.emplace_back(InputStruct{key,this->my_client_id,seq});
     write(udp_fd,input_queue.back().to_str().c_str(),input_queue.back().to_str().size());
 }
 
-void GameSync::update_tank(std::vector<Tank> &tanks){
+void GameSync::update_tank(std::map<int,Tank> &tanks, std::vector<MapObject> &staticObjects){
+    //get last server ack
+    pthread_mutex_lock(&this->update_mutex);
+    while(!update_queue.empty()){
+        switch(update_queue.front().type){
+        case 'u':
+            if(update_queue.front().client_id==this->my_client_id){
+                //get last ack
+                if(this->last_ack.seq<update_queue.front().seq){
+                    this->last_ack=update_queue.front();
+                }
+            }
+            else{
+                //update other tanks
+                if(tanks.find(update_queue.front().client_id)!=tanks.end()){
+                    tanks[update_queue.front().client_id].setX(update_queue.front().x);
+                    tanks[update_queue.front().client_id].setY(update_queue.front().y);
+                    tanks[update_queue.front().client_id].setDirection(update_queue.front().dir);
+                }
+            }
+        case 'f':
+            //remote tank fire
+            if(update_queue.front().client_id!=this->my_client_id && tanks.find(update_queue.front().client_id)!=tanks.end()){
+                tanks[update_queue.front().client_id].fireBullet();
+            }
+            break;
+        case 'h':
+            //tank hp update
+            if(tanks.find(update_queue.front().client_id)!=tanks.end()){
+                tanks[update_queue.front().client_id].setHP(update_queue.front().value);
+            }
+            break;
+        default: break;
+        }
+        update_queue.pop_front();
+    }
+    pthread_mutex_unlock(&this->update_mutex);
 
+    //apply client side prediction
+    auto &this_tank=tanks[this->my_client_id];
+    //discard old inputs
+    while(input_queue.front().seq!=last_ack.seq){
+        input_queue.pop_front();
+    }
+    input_queue.pop_back();
+
+    int preX = last_ack.x;
+    int preY = last_ack.y;
+    for(auto &item:input_queue){
+        switch(item.key){
+        case 'w':
+            this_tank.setDirection(Direction::Up);
+            int nextY=preY-1;
+            if(nextY>0 && !this_tank.checkTankCollision(preX,nextY,staticObjects)){
+                this_tank.setY(nextY);
+            }
+            break;
+        case 'a':
+            this_tank.setDirection(Direction::Left);
+            int nextX=preX-1;
+            if(nextX>0 && !this_tank.checkTankCollision(nextX,preY,staticObjects)){
+                this_tank.setX(nextX);
+            }
+            break;
+        case 's':
+            this_tank.setDirection(Direction::Down);
+            int nextY=preY+1;
+            if(nextY<SCREEN_HEIGHT-1 && !this_tank.checkTankCollision(preX,nextY,staticObjects)){
+                this_tank.setY(nextY);
+            }
+            break;
+        case 'd':
+            this_tank.setDirection(Direction::Right);
+            int nextX=preX+1;
+            if(nextX<SCREEN_WIDTH-1 && !this_tank.checkTankCollision(nextX,preY,staticObjects)){
+                this_tank.setX(nextX);
+            }
+            break;
+        }
+    }
 }
 
 void* GameSync::udp_listen(void *obj_ptr){
@@ -55,7 +137,7 @@ void* GameSync::udp_listen(void *obj_ptr){
             if(tmp.valid){
                 pthread_mutex_lock(&self.update_mutex);
                 self.update_queue.push_back(tmp);
-                pthread_mutex_lock(&self.update_mutex);
+                pthread_mutex_unlock(&self.update_mutex);
             }
         }
     }

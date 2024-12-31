@@ -9,11 +9,17 @@ struct UpdateStruct{
     int x,y;
     Direction dir;
     int value;
+    int seq;
     bool valid;
+    UpdateStruct(int _client_id, const Tank &this_tank):
+        type('u'), client_id(_client_id),
+        x(this_tank.getX()), y(this_tank.getY()), dir(this_tank.getDirection()),
+        seq(0), valid(true) {}
     UpdateStruct(std::string str){
         std::string tmp1,tmp2;
         sep_str(str,tmp1,tmp2,COMMAND_SEP);
         this->valid=true;
+        this->seq=0;
         if(tmp1.size()!=1 || (tmp1[0]!='u' && tmp1[0]!='f' && tmp1[0]!='h')){
             valid=false;
             return;
@@ -64,6 +70,14 @@ struct UpdateStruct{
         case 2: this->dir=Direction::Up;break;
         case 3: this->dir=Direction::Down;break;
         }
+
+        str=tmp2;
+        sep_str(str,tmp1,tmp2,COMMAND_SEP);
+        if(!is_int(tmp1)){
+            valid=false;
+            return;
+        }
+        this->seq=std::stoi(tmp1);
     }
 };
 #endif

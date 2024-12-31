@@ -266,13 +266,9 @@ void* GameServer::game_loop(void *obj_ptr){
     delete (StartParam*)obj_ptr;//delete dummy obj only for passing parameter to this thread
 
     int player_count=self.room_mgr.player_count(room_id);
-    int client_id_list[4], idx;
-    idx=0;
-    std::map<int,int> client_id2idx;
+    std::vector<int> client_id_list;
     for(auto &client_id:self.room_mgr.get_clients(room_id)){
-        client_id_list[idx]=client_id;
-        client_id2idx[client_id]=idx;
-        ++idx;
+        client_id_list.push_back(client_id);
     }
 
     //generate map
@@ -280,20 +276,11 @@ void* GameServer::game_loop(void *obj_ptr){
         SCREEN_WIDTH,SCREEN_HEIGHT,
         self.room_mgr.get_map_seed(room_id)
     );
-    std::vector<std::vector<MapObject>> grid(
-        SCREEN_WIDTH,std::vector<MapObject>(SCREEN_HEIGHT)
-    );
-    for(auto &item:staticObjects){
-        grid[item.getX()][item.getY()]=item;
-    }
 
-    std::string client_id_list_str[4];
-    for(idx=0;idx<player_count;++idx){
-        client_id_list_str[idx++]=id2str(client_id_list[idx]);
-    }
-    auto tanks=Tank::createTanks(
+    //create tanks
+    auto tanks=Tank::createTank(
         self.room_mgr.player_count(room_id),
-        client_id_list_str,
+        client_id_list,
         SCREEN_WIDTH,SCREEN_HEIGHT
     );
 
@@ -303,51 +290,50 @@ void* GameServer::game_loop(void *obj_ptr){
     bool loopRunning=true;
     while(loopRunning){
         if(!timer.shouldUpdate()) continue;
-        for(idx=0;idx<player_count;++idx){
-            int client_id=client_id_list[idx];
+        for(auto &[client_id, this_tank]:tanks){
             //handle client input and update objects
             pthread_mutex_lock(self.input_buffer_mutex+client_id);
             auto &in_buffer=self.input_buffer[client_id];
             while(!in_buffer.empty()){
                 switch(in_buffer.front().key){
                 case 'w':
-                    tanks[idx].setDirection(Direction::Up);
-                    int nextY = tanks[idx].getY() - 1;
-                    if (nextY > 0 && !tanks[idx].checkTankCollision(tanks[idx].getX(), nextY, staticObjects)){
-                        tanks[idx].setY(nextY);
+                    this_tank.setDirection(Direction::Up);
+                    int nextY = this_tank.getY() - 1;
+                    if (nextY > 0 && !this_tank.checkTankCollision(this_tank.getX(), nextY, staticObjects)){
+                        this_tank.setY(nextY);
                     }
                     break;
                 case 'a':
-                    tanks[idx].setDirection(Direction::Left);
-                    int nextX = tanks[idx].getX() - 1;
-                    if (nextX > 0 && !tanks[idx].checkTankCollision(nextX, tanks[idx].getY(), staticObjects)){
-                        tanks[idx].setX(nextX);
+                    this_tank.setDirection(Direction::Left);
+                    int nextX = this_tank.getX() - 1;
+                    if (nextX > 0 && !this_tank.checkTankCollision(nextX, this_tank.getY(), staticObjects)){
+                        this_tank.setX(nextX);
                     }
                     break;
                 case 's':
-                    tanks[idx].setDirection(Direction::Down);
-                    int nextY = tanks[idx].getY() + 1;
-                    if (nextY < SCREEN_HEIGHT - 1 && !tanks[idx].checkTankCollision(tanks[idx].getX(), nextY, staticObjects)){
-                        tanks[idx].setY(nextY);
+                    this_tank.setDirection(Direction::Down);
+                    int nextY = this_tank.getY() + 1;
+                    if (nextY < SCREEN_HEIGHT - 1 && !this_tank.checkTankCollision(this_tank.getX(), nextY, staticObjects)){
+                        this_tank.setY(nextY);
                     }
                     break;
                 case 'd':
-                    tanks[idx].setDirection(Direction::Right);
-                    int nextX = tanks[idx].getX() + 1;
-                    if (nextX < SCREEN_WIDTH - 1 && !tanks[idx].checkTankCollision(nextX, tanks[idx].getY(), staticObjects)){
-                        tanks[idx].setX(nextX);
+                    this_tank.setDirection(Direction::Right);
+                    int nextX = this_tank.getX() + 1;
+                    if (nextX < SCREEN_WIDTH - 1 && !this_tank.checkTankCollision(nextX, this_tank.getY(), staticObjects)){
+                        this_tank.setX(nextX);
                     }
                     break;
                 case ' ':
-                    tanks[idx].fireBullet();
+                    this_tank.fireBullet();
                     break;
                 default: break;
                 }
                 //generate msg
                 //[uf],client_id,x,y,direction,seq
                 snprintf(udp_send_buffer,1024,"u,%s,%d,%d,%d,%d",
-                    id2str(client_id),tanks[idx].getX(),tanks[idx].getY(),
-                    tanks[idx].getDirection(),in_buffer.front().seq
+                    id2str(client_id),this_tank.getX(),this_tank.getY(),
+                    this_tank.getDirection(),in_buffer.front().seq
                 );
                 if(in_buffer.front().key==' ') udp_send_buffer[0]='f';
                 //send update to every client
