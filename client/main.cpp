@@ -18,7 +18,7 @@ void drawCustomBorder2(WINDOW* win);
 void joinRoomById(WINDOW* win, std::string& roomId, int& connfd, int& clientId, std::string& username);
 void quickJoin(WINDOW* win, std::string& roomId, int& connfd, int& clientId, std::string& username);
 void RoomMenu(WINDOW* win, GameState& state, std::string& roomId, int& connfd, int& clientId, std::string& username);
-void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId, int& connfd);
+void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId, int& connfd, int &playerNum);
 void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObject>& staticObjects, GameState& state, const int& clientId, int playerNum, std::map<int,std::string>&id2Names);
 void drawWinScreen(WINDOW* win);
 void drawLoseScreen(WINDOW* win);
@@ -459,7 +459,7 @@ void RoomMenu(WINDOW* win, GameState& state, std::string& roomId, int& connfd, i
     }
 }
 
-void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId, int& connfd) {
+void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId, int& connfd, int &playerNum) {
     setlocale(LC_ALL, "");
     keypad(win, TRUE);
     nodelay(win, TRUE); // non-blocking mode
@@ -521,9 +521,13 @@ void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId,
             wattroff(win, COLOR_PAIR(3) | A_REVERSE);
         }
         wrefresh(win);
-        bool flag;
-        int playerNum;
-        InRoomListen(connfd, isHost, flag, playerNum);
+        bool sigStart=false;
+        InRoomListen(connfd, isHost, sigStart, playerNum);
+        if(sigStart){
+            state = GameState::GameLoop;
+            return;
+        }
+        
         // Handle input
         int ch = wgetch(win);
         switch (ch) {
@@ -537,7 +541,7 @@ void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId,
                 if (isHost && selectedOption == 0) {
                     // Start Game logic (Host only)
                     startGame(connfd, roomId.c_str());
-                    state = GameState::GameLoop;
+                    //state = GameState::GameLoop;
                     return;
                 } else if (selectedOption == 1 || !isHost) {
                     // Exit Room
@@ -885,7 +889,7 @@ int main() {
             }
 
             case GameState::InRoom: {
-                InRoomMenu(roomWin, state, false, roomId, connfd);
+                InRoomMenu(roomWin, state, false, roomId, connfd, playerNum);
                 break;
             }
 
