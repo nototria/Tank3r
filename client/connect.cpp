@@ -138,7 +138,7 @@ void getStartInfo(const int sockfd, const int playerNum, std::map<int,std::strin
             seed=atoi(recv_buffer+5);
         }else{
             int id=atoi(recv_buffer);
-            id2Name[id]=recv_buffer+6;
+            id2Name[id]=recv_buffer+5;
         }
     }
     //read line
