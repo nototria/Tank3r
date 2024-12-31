@@ -125,7 +125,7 @@ void GameServer::start_game(const int room_id){
         str_idx+=(6+user_name.size());
     }
     srand(time(0));
-    room_mgr.set_map_seed(room_id,(unsigned long)random());
+    room_mgr.set_map_seed(room_id,rand());//0~RAND_MAX
     snprintf(send_buffer+str_idx,1024-str_idx,"seed,%lu\n",room_mgr.get_map_seed(room_id));
     for(const auto &client_id:room_mgr.get_clients(room_id)){
         write(pollfd_list[client_id].fd,send_buffer,strlen(send_buffer));

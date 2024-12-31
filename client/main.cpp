@@ -18,7 +18,7 @@ void drawCustomBorder2(WINDOW* win);
 void joinRoomById(WINDOW* win, std::string& roomId, int& connfd, int& clientId, std::string& username);
 void quickJoin(WINDOW* win, std::string& roomId, int& connfd, int& clientId, std::string& username);
 void RoomMenu(WINDOW* win, GameState& state, std::string& roomId, int& connfd, int& clientId, std::string& username);
-void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId, int& connfd, int &playerNum);
+void InRoomMenu(WINDOW* win, GameState& state, std::string& roomId, int& connfd, int &playerNum);
 void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObject>& staticObjects, GameState& state, const int& clientId, int playerNum, std::map<int,std::string>&id2Names);
 void drawWinScreen(WINDOW* win);
 void drawLoseScreen(WINDOW* win);
@@ -459,7 +459,7 @@ void RoomMenu(WINDOW* win, GameState& state, std::string& roomId, int& connfd, i
     }
 }
 
-void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId, int& connfd, int &playerNum) {
+void InRoomMenu(WINDOW* win, GameState& state, std::string& roomId, int& connfd, int &playerNum) {
     setlocale(LC_ALL, "");
     keypad(win, TRUE);
     nodelay(win, TRUE); // non-blocking mode
@@ -502,6 +502,7 @@ void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId,
 
     int selectedOption = 1;
 
+    bool isHost=false;
     while (true) {
         // Option hints
         options[0]=isHost ? "Start Game" : "Waiting for the Host to Start...";
@@ -887,21 +888,18 @@ int main() {
             }
 
             case GameState::InRoom: {
-                InRoomMenu(roomWin, state, false, roomId, connfd, playerNum);
+                InRoomMenu(roomWin, state, roomId, connfd, playerNum);
                 break;
             }
 
             case GameState::GameLoop: {
                 // TBD: Generate static objects
-                std::vector<MapObject> staticObjects = generateMap(width, height, 1145);
-                std::map<int, std::string> id2Names = {
-                    {1111, "it's me"},
-                    {2222, "Player2"},
-                    {3333, "Player3"},
-                    {4444, "Player4"}
-                };
+                std::map<int, std::string> id2Names;
+                int seed;
+                getStartInfo(connfd, playerNum, id2Names, seed);
+                std::vector<MapObject> staticObjects = generateMap(width, height, seed);
                 // TBD: get other players info from server (PlayerNames)
-                gameLoop(gameWin, width, height, staticObjects, state, 4444, 4, id2Names);
+                gameLoop(gameWin, width, height, staticObjects, state, clientId, playerNum, id2Names);
                 break;
             }
 

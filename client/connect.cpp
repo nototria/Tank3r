@@ -9,6 +9,7 @@
 #include "../shared/GameParameters.h"
 #include "../shared/GameObject.h"
 #include<poll.h>
+#include<set>
 
 void suppress_stderr() {
     int fd = open("/dev/null", O_WRONLY);
@@ -120,4 +121,31 @@ void InRoomListen(int sockfd, bool &isHost, bool &startGame, int &playerNum){
         startGame=true;
         playerNum=atoi(recv_buffer+6);
     }
+}
+
+void getStartInfo(const int sockfd, const int playerNum, std::map<int,std::string> &id2Name, int &seed){
+    char recv_buffer[1024];
+    int len;
+    for(int i=0;i<playerNum;++i){
+        //read line
+        for(len=0;len<1024;++len){
+            if(read(sockfd,recv_buffer+len,1)<=0) break;
+            if(recv_buffer[len]=='\n') break;
+        }
+        recv_buffer[len]='\0';
+
+        if(strncmp(recv_buffer,"seed,",5)==0){
+            seed=atoi(recv_buffer+5);
+        }else{
+            int id=atoi(recv_buffer);
+            id2Name[id]=recv_buffer+6;
+        }
+    }
+    //read line
+    for(len=0;len<1024;++len){
+        if(read(sockfd,recv_buffer+len,1)<=0) break;
+        if(recv_buffer[len]=='\n') break;
+    }
+    recv_buffer[len]='\0';
+    if(strncmp(recv_buffer,"seed,",5)==0) seed=atoi(recv_buffer+5);
 }
