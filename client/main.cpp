@@ -882,7 +882,7 @@ int main() {
             }
 
             case GameState::InRoom: {
-                InRoomMenu(roomWin, state, true, roomId, connfd);
+                InRoomMenu(roomWin, state, false, roomId, connfd);
                 break;
             }
 
