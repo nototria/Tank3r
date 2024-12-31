@@ -7,11 +7,12 @@
 #include <utility>
 #include <algorithm>
 #include <stack>
+#include <random>
 #include "GameObject.h"
 
-void connectCorners(std::vector<std::vector<char>>& mapGrid, int width, int height);
-void placeDenseClusters(std::vector<std::vector<char>>& mapGrid, int width, int height, int maxClusters, int minClusterSize, int maxClusterSize);
-void connectRandomPoints(std::vector<std::vector<char>>& mapGrid, int x1, int y1, int x2, int y2, int corridorWidth);
+void connectCorners(std::mt19937 &rng, std::vector<std::vector<char>>& mapGrid, int width, int height);
+void placeDenseClusters(std::mt19937 &rng, std::vector<std::vector<char>>& mapGrid, int width, int height, int maxClusters, int minClusterSize, int maxClusterSize);
+void connectRandomPoints(std::mt19937 &rng, std::vector<std::vector<char>>& mapGrid, int x1, int y1, int x2, int y2, int corridorWidth);
 void drawWaterBorder(std::vector<std::vector<char>>& mapGrid, int width, int height, int excludeAreaSize);
 void cleanLonelyObjects(std::vector<std::vector<char>>& mapGrid, int width, int height, int minClusterSize);
 void fillHolesWithWalls(std::vector<std::vector<char>>& mapGrid, int width, int height);
@@ -19,22 +20,22 @@ void connectLargeHolesToCorners(std::vector<std::vector<char>>& mapGrid, int wid
 
 std::vector<MapObject> generateMap(int width, int height, unsigned seed) {
     std::vector<MapObject> mapObjects;
-    std::srand(seed);
+    std::mt19937 rng(seed);
     std::vector<std::vector<char>> mapGrid(width, std::vector<char>(height, ' '));
 
     // TBD: need to discuss the parameters
-    placeDenseClusters(mapGrid, width, height, 300, 20, 200); 
+    placeDenseClusters(rng, mapGrid, width, height, 300, 20, 200); 
 
     // draw random road
-    for(int i=0 ;i<std::rand()%10+5; i++){
-        int x1 = std::rand() % width;
-        int y1 = std::rand() % height;
-        int x2 = std::rand() % width;
-        int y2 = std::rand() % height;
-        connectRandomPoints(mapGrid, x1, y1, x2, y2, 3);
+    for(int i=0 ;i<rng()%10+5; i++){
+        int x1 = rng() % width;
+        int y1 = rng() % height;
+        int x2 = rng() % width;
+        int y2 = rng() % height;
+        connectRandomPoints(rng, mapGrid, x1, y1, x2, y2, 3);
     }
 
-    connectCorners(mapGrid, width, height);
+    connectCorners(rng, mapGrid, width, height);
     drawWaterBorder(mapGrid, width, height, 3);
     connectLargeHolesToCorners(mapGrid, width, height, 10); // >= 10
     cleanLonelyObjects(mapGrid, width, height, 6); // < 6
@@ -54,12 +55,12 @@ std::vector<MapObject> generateMap(int width, int height, unsigned seed) {
     return mapObjects;
 }
 
-void connectCorners(std::vector<std::vector<char>>& mapGrid, int width, int height) {
+void connectCorners(std::mt19937 &rng, std::vector<std::vector<char>>& mapGrid, int width, int height) {
     std::vector<std::pair<int, int>> corners = {
         {2, 2}, {1, height - 2}, {width - 2, height - 2}, {width - 2, 1}};
     
-    int centerX = (std::rand() % (width-20))+10;
-    int centerY = (std::rand() % (height-8))+4;
+    int centerX = (rng() % (width-20))+10;
+    int centerY = (rng() % (height-8))+4;
     int corridorWidth = 2;
     float slopePreference = 0.4f;
 
@@ -88,7 +89,7 @@ void connectCorners(std::vector<std::vector<char>>& mapGrid, int width, int heig
                 }
             }
 
-            if (std::rand() % 100 < (int)(slopePreference * 50)) {
+            if (rng() % 100 < (int)(slopePreference * 50)) {
                 if (x != centerX && y != centerY) {
                     x += dx;
                     y += dy;
@@ -108,7 +109,7 @@ void connectCorners(std::vector<std::vector<char>>& mapGrid, int width, int heig
     }
 }
 
-void connectRandomPoints(std::vector<std::vector<char>>& mapGrid, int x1, int y1, int x2, int y2, int corridorWidth) {
+void connectRandomPoints(std::mt19937 &rng, std::vector<std::vector<char>>& mapGrid, int x1, int y1, int x2, int y2, int corridorWidth) {
     int currentX = x1;
     int currentY = y1;
 
@@ -123,7 +124,7 @@ void connectRandomPoints(std::vector<std::vector<char>>& mapGrid, int x1, int y1
     }
 
     while (currentX != x2 || currentY != y2) {
-        bool moveHorizontally = (std::rand() % 2 == 0);
+        bool moveHorizontally = (rng() % 2 == 0);
         if (moveHorizontally && currentX != x2) {
             currentX += (x2 > currentX) ? 1 : -1;
         } else if (!moveHorizontally && currentY != y2) {
@@ -131,9 +132,9 @@ void connectRandomPoints(std::vector<std::vector<char>>& mapGrid, int x1, int y1
         }
 
         // make it tortuous
-        if (std::rand() % 4 == 0) {
-            currentX += (std::rand() % 3 - 1);
-            currentY += (std::rand() % 3 - 1);
+        if (rng() % 4 == 0) {
+            currentX += (rng() % 3 - 1);
+            currentY += (rng() % 3 - 1);
         }
 
         // Carve the current position as part of the corridor
@@ -149,14 +150,14 @@ void connectRandomPoints(std::vector<std::vector<char>>& mapGrid, int x1, int y1
     }
 }
 
-void placeDenseClusters(std::vector<std::vector<char>>& mapGrid, int width, int height, int maxClusters, int minClusterSize, int maxClusterSize) {
-    maxClusters = maxClusters + std::rand() % maxClusters;
+void placeDenseClusters(std::mt19937 &rng, std::vector<std::vector<char>>& mapGrid, int width, int height, int maxClusters, int minClusterSize, int maxClusterSize) {
+    maxClusters = maxClusters + rng() % maxClusters;
     
     for (int i = 0; i < maxClusters; ++i) {
-        char clusterType = (std::rand() % 2 == 0) ? 'W' : 'A';
+        char clusterType = (rng() % 2 == 0) ? 'W' : 'A';
 
-        int startX = std::rand() % width;
-        int startY = std::rand() % height;
+        int startX = rng() % width;
+        int startY = rng() % height;
 
         if (mapGrid[startX][startY] != ' ') continue;
 
@@ -164,9 +165,9 @@ void placeDenseClusters(std::vector<std::vector<char>>& mapGrid, int width, int 
         mapGrid[startX][startY] = clusterType;
 
         for (int j = 0; j < maxClusterSize; ++j) {
-            auto [currentX, currentY] = clusterTiles[std::rand() % clusterTiles.size()];
-            int newX = currentX + (std::rand() % 3 - 1);
-            int newY = currentY + (std::rand() % 3 - 1);
+            auto [currentX, currentY] = clusterTiles[rng() % clusterTiles.size()];
+            int newX = currentX + (rng() % 3 - 1);
+            int newY = currentY + (rng() % 3 - 1);
 
             if (newX > 1 && newX < width - 2 && newY > 1 && newY < height - 2 &&
                 mapGrid[newX][newY] == ' ') {
@@ -183,6 +184,8 @@ void placeDenseClusters(std::vector<std::vector<char>>& mapGrid, int width, int 
     }
 }
 
+
+// helper
 void drawWaterBorder(std::vector<std::vector<char>>& mapGrid, int width, int height, int excludeAreaSize) {
     // Define the corner coordinates
     std::vector<std::pair<int, int>> corners = {
