@@ -506,14 +506,17 @@ void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId,
         // Option hints
         options[0]=isHost ? "Start Game" : "Waiting for the Host to Start...";
         int optionStartY = roomMsgY + 3;
-        int optionStartX = (maxX - options[0].size()) / 2;
-
+        int optionStartX = (maxX - options[0].length()) / 2;
+        for(int i = 0; i < numOptions; ++i){
+            mvwprintw(win, optionStartY + i, optionStartX-15,"                                             ");
+        }
         for (int i = 0; i < numOptions; ++i) {
             if (i == selectedOption) {
                 wattron(win, COLOR_PAIR(3) | A_REVERSE);
             } else {
                 wattron(win, COLOR_PAIR(3));
             }
+            optionStartX = (maxX - options[i].length()) / 2;
             mvwprintw(win, optionStartY + i, optionStartX, "%s", options[i].c_str());
             wattroff(win, COLOR_PAIR(3) | A_REVERSE);
         }
