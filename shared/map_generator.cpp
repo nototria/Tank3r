@@ -23,7 +23,7 @@ std::vector<MapObject> generateMap(int width, int height, unsigned seed) {
     std::vector<std::vector<char>> mapGrid(width, std::vector<char>(height, ' '));
 
     // TBD: need to discuss the parameters
-    placeDenseClusters(mapGrid, width, height, 300, 20, 100); 
+    placeDenseClusters(mapGrid, width, height, 300, 20, 200); 
 
     // draw random road
     for(int i=0 ;i<std::rand()%10+5; i++){
