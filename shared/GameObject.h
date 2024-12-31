@@ -260,4 +260,53 @@ public:
     }
 };
 
+// server side
+std::vector<int> checkBulletTankCollisions(std::map<int,Tank>& tanksMap) {
+    std::vector<int> getHitTankIds;
+    for (auto& [id, tank] : tanksMap) {
+        std::vector<Bullet>& bullets = tank.getBullets();
+        for (auto it = bullets.begin(); it != bullets.end();) {
+            bool collisionDetected = false;
+            if (!it->isActive()) {
+                it = bullets.erase(it);
+                continue;
+            }
+
+            int x = it->getX();
+            int y = it->getY();
+            for (auto& [id2, tank2] : tanksMap) {
+                if (id == id2 || !tank2.IsAlive()) continue;
+                if (tank2.getX() == x && tank2.getY() == y) {
+                    collisionDetected = true;
+                    getHitTankIds.push_back(id2);
+                    tank2.setHP(tank2.getHP() - 1);
+                    it = bullets.erase(it);
+                    break;
+                }
+            }
+            if (!collisionDetected) {
+                ++it;
+            }
+        }
+    }
+    return getHitTankIds;
+}
+
+void handleBulletCollisions(std::map<int,Tank>& tanksMap) {
+    auto checkCollisionWithBullet = [](Bullet& bullet1, Bullet& bullet2) {
+        return bullet1.getX() == bullet2.getX() && bullet1.getY() == bullet2.getY();
+    };
+    for(auto& [id, tank] : tanksMap) {
+        std::vector<Bullet>& bullets = tank.getBullets();
+        for(auto it1 = bullets.begin(); it1 != bullets.end(); ++it1) {
+            for(auto it2 = bullets.begin(); it2 != bullets.end(); ++it2) {
+                if(it1 == it2) continue;
+                if(checkCollisionWithBullet(*it1, *it2)) {
+                    it1->setActive(false);
+                    it2->setActive(false);
+                }
+            }
+        }
+    }
+}
 #endif // GAMEOBJECT_H
