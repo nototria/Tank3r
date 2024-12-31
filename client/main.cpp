@@ -5,7 +5,7 @@
 #include "../client/connect.cpp"
 
 // define
-void checkBulletTankCollisions(std::map<int,Tank>& tanksMap);
+std::vector<int> checkBulletTankCollisions(std::map<int,Tank>& tanksMap);
 void handleBulletCollisions(std::map<int,Tank>& tanksMap);
 void initGame(int& width, int& height, WINDOW*& titleWin, WINDOW*& inputWin, WINDOW*& roomWin, WINDOW*& gameWin, WINDOW*& endWin, GameState& state);
 void renderTank(WINDOW* win, Tank& tank);
@@ -25,7 +25,8 @@ void drawLoseScreen(WINDOW* win);
 void drawTieScreen(WINDOW* win);
 
 // server side
-void checkBulletTankCollisions(std::map<int,Tank>& tanksMap) {
+std::vector<int> checkBulletTankCollisions(std::map<int,Tank>& tanksMap) {
+    std::vector<int> getHitTankIds;
     for (auto& [id, tank] : tanksMap) {
         std::vector<Bullet>& bullets = tank.getBullets();
         for (auto it = bullets.begin(); it != bullets.end();) {
@@ -41,6 +42,7 @@ void checkBulletTankCollisions(std::map<int,Tank>& tanksMap) {
                 if (id == id2 || !tank2.IsAlive()) continue;
                 if (tank2.getX() == x && tank2.getY() == y) {
                     collisionDetected = true;
+                    getHitTankIds.push_back(id2);
                     tank2.setHP(tank2.getHP() - 1);
                     it = bullets.erase(it);
                     break;
@@ -51,6 +53,7 @@ void checkBulletTankCollisions(std::map<int,Tank>& tanksMap) {
             }
         }
     }
+    return getHitTankIds;
 }
 
 void handleBulletCollisions(std::map<int,Tank>& tanksMap) {
@@ -148,7 +151,7 @@ void renderStaticObjects(WINDOW* win, const std::vector<MapObject>& objects) {
             wattron(win, COLOR_PAIR(COLOR_CYAN));
         }
         mvwaddwstr(win, obj.getY(), obj.getX(), obj.getSymbol().c_str());
-        wattroff(win, COLOR_PAIR(COLOR_WHITE));
+        wattroff(win, COLOR_PAIR(COLOR_GRAY) & COLOR_PAIR(COLOR_CYAN));
     }
 }
 
@@ -931,7 +934,7 @@ int main() {
 
             case GameState::GameLoop: {
                 // TBD: Generate static objects
-                std::vector<MapObject> staticObjects = generateMap(width, height, 5269);
+                std::vector<MapObject> staticObjects = generateMap(width, height, 1145);
                 std::map<int, std::string> id2Names = {
                     {1111, "it's me"},
                     {2222, "Player2"},
