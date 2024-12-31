@@ -5,7 +5,7 @@
 #include "../client/connect.cpp"
 
 // define
-void checkBulletTankCollisions(std::map<int,Tank>& tanksMap);
+std::vector<int> checkBulletTankCollisions(std::map<int,Tank>& tanksMap);
 void handleBulletCollisions(std::map<int,Tank>& tanksMap);
 void initGame(int& width, int& height, WINDOW*& titleWin, WINDOW*& inputWin, WINDOW*& roomWin, WINDOW*& gameWin, WINDOW*& endWin, GameState& state);
 void renderTank(WINDOW* win, Tank& tank);
@@ -23,53 +23,6 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
 void drawWinScreen(WINDOW* win);
 void drawLoseScreen(WINDOW* win);
 void drawTieScreen(WINDOW* win);
-
-// server side
-void checkBulletTankCollisions(std::map<int,Tank>& tanksMap) {
-    for (auto& [id, tank] : tanksMap) {
-        std::vector<Bullet>& bullets = tank.getBullets();
-        for (auto it = bullets.begin(); it != bullets.end();) {
-            bool collisionDetected = false;
-            if (!it->isActive()) {
-                it = bullets.erase(it);
-                continue;
-            }
-
-            int x = it->getX();
-            int y = it->getY();
-            for (auto& [id2, tank2] : tanksMap) {
-                if (id == id2 || !tank2.IsAlive()) continue;
-                if (tank2.getX() == x && tank2.getY() == y) {
-                    collisionDetected = true;
-                    tank2.setHP(tank2.getHP() - 1);
-                    it = bullets.erase(it);
-                    break;
-                }
-            }
-            if (!collisionDetected) {
-                ++it;
-            }
-        }
-    }
-}
-
-void handleBulletCollisions(std::map<int,Tank>& tanksMap) {
-    auto checkCollisionWithBullet = [](Bullet& bullet1, Bullet& bullet2) {
-        return bullet1.getX() == bullet2.getX() && bullet1.getY() == bullet2.getY();
-    };
-    for(auto& [id, tank] : tanksMap) {
-        std::vector<Bullet>& bullets = tank.getBullets();
-        for(auto it1 = bullets.begin(); it1 != bullets.end(); ++it1) {
-            for(auto it2 = bullets.begin(); it2 != bullets.end(); ++it2) {
-                if(it1 == it2) continue;
-                if(checkCollisionWithBullet(*it1, *it2)) {
-                    it1->setActive(false);
-                    it2->setActive(false);
-                }
-            }
-        }
-    }
-}
 
 // client side
 void initGame(int& width, int& height, WINDOW*& titleWin, WINDOW*& inputWin, WINDOW*& roomWin, WINDOW*& gameWin, WINDOW*& endWin, GameState& state) {
@@ -148,7 +101,7 @@ void renderStaticObjects(WINDOW* win, const std::vector<MapObject>& objects) {
             wattron(win, COLOR_PAIR(COLOR_CYAN));
         }
         mvwaddwstr(win, obj.getY(), obj.getX(), obj.getSymbol().c_str());
-        wattroff(win, COLOR_PAIR(COLOR_WHITE));
+        wattroff(win, COLOR_PAIR(COLOR_GRAY) & COLOR_PAIR(COLOR_CYAN));
     }
 }
 
@@ -931,7 +884,7 @@ int main() {
 
             case GameState::GameLoop: {
                 // TBD: Generate static objects
-                std::vector<MapObject> staticObjects = generateMap(width, height, 5269);
+                std::vector<MapObject> staticObjects = generateMap(width, height, 1145);
                 std::map<int, std::string> id2Names = {
                     {1111, "it's me"},
                     {2222, "Player2"},
