@@ -288,6 +288,7 @@ void* GameServer::game_loop(void *obj_ptr){
     char udp_send_buffer[1024];
     
     bool loopRunning=true;
+    int nextX, nextY;
     while(loopRunning){
         if(!timer.shouldUpdate()) continue;
         for(auto &[client_id, this_tank]:tanks){
@@ -298,28 +299,28 @@ void* GameServer::game_loop(void *obj_ptr){
                 switch(in_buffer.front().key){
                 case 'w':
                     this_tank.setDirection(Direction::Up);
-                    int nextY = this_tank.getY() - 1;
+                    nextY = this_tank.getY() - 1;
                     if (nextY > 0 && !this_tank.checkTankCollision(this_tank.getX(), nextY, staticObjects)){
                         this_tank.setY(nextY);
                     }
                     break;
                 case 'a':
                     this_tank.setDirection(Direction::Left);
-                    int nextX = this_tank.getX() - 1;
+                    nextX = this_tank.getX() - 1;
                     if (nextX > 0 && !this_tank.checkTankCollision(nextX, this_tank.getY(), staticObjects)){
                         this_tank.setX(nextX);
                     }
                     break;
                 case 's':
                     this_tank.setDirection(Direction::Down);
-                    int nextY = this_tank.getY() + 1;
+                    nextY = this_tank.getY() + 1;
                     if (nextY < SCREEN_HEIGHT - 1 && !this_tank.checkTankCollision(this_tank.getX(), nextY, staticObjects)){
                         this_tank.setY(nextY);
                     }
                     break;
                 case 'd':
                     this_tank.setDirection(Direction::Right);
-                    int nextX = this_tank.getX() + 1;
+                    nextX = this_tank.getX() + 1;
                     if (nextX < SCREEN_WIDTH - 1 && !this_tank.checkTankCollision(nextX, this_tank.getY(), staticObjects)){
                         this_tank.setX(nextX);
                     }
