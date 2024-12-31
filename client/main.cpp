@@ -264,7 +264,7 @@ void handleUsernameInput(WINDOW* win, std::string& username) {
     int maxY, maxX;
     getmaxyx(win, maxY, maxX);
     drawUsernameInput(win, username);
-    int ch, cursor_position = 1;
+    int ch, cursor_position = username.length() + 1;
     noecho();
     keypad(win, TRUE);
     while (true) {
@@ -277,11 +277,13 @@ void handleUsernameInput(WINDOW* win, std::string& username) {
             mvwprintw(win, 20, (maxX-21)/2, "Invalid character ','");
             continue;
         } else if (ch == KEY_BACKSPACE || ch == 127) {
+            curs_set(1);
             if (!username.empty() && cursor_position > 1) {
                 username.erase(cursor_position - 2, 1);
                 cursor_position--;
             }
         } else if (ch == KEY_LEFT || ch == KEY_RIGHT) {
+            curs_set(1);
             switch (ch) {
                 case KEY_LEFT:
                     if (cursor_position > 1) cursor_position--;
