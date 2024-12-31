@@ -1,4 +1,4 @@
-FLAGS = -O2 -std=c++14
+FLAGS = -O2 -std=c++17
 
 main.out: GameServer.o ClientManager.o RoomManager.o
 	g++ $(FLAGS) main.cpp GameServer.o  ClientManager.o RoomManager.o -o main.out
