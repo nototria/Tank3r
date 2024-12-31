@@ -541,8 +541,6 @@ void InRoomMenu(WINDOW* win, GameState& state, bool isHost, std::string& roomId,
                 if (isHost && selectedOption == 0) {
                     // Start Game logic (Host only)
                     startGame(connfd, roomId.c_str());
-                    //state = GameState::GameLoop;
-                    return;
                 } else if (selectedOption == 1 || !isHost) {
                     // Exit Room
                     exitRoom(connfd, roomId.c_str());
