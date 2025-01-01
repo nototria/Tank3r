@@ -626,7 +626,6 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
         if (ch != ERR) {lastKey = ch;}
 
         if (timer.shouldUpdate()) {
-            /*
             switch (lastKey) {
                 case ' ': {
                     myTank.fireBullet();
@@ -636,7 +635,8 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
                     myTank.setDirection(Direction::Up);
                     int nextY = myTank.getY() - 1;
                     if (nextY > 0 && !myTank.checkTankCollision(myTank.getX(), nextY, staticObjects)) {
-                        myTank.setY(nextY);
+                        // myTank.setY(nextY);
+                        gameSync.send_input('w');
                     }
                     break;
                 }
@@ -644,7 +644,8 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
                     myTank.setDirection(Direction::Down);
                     int nextY = myTank.getY() + 1;
                     if (nextY < gridHeight - 1 && !myTank.checkTankCollision(myTank.getX(), nextY, staticObjects)) {
-                        myTank.setY(nextY);
+                        // myTank.setY(nextY);
+                        gameSync.send_input('s');
                     }
                     break;
                 }
@@ -652,7 +653,8 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
                     myTank.setDirection(Direction::Left);
                     int nextX = myTank.getX() - 1;
                     if (nextX > 0 && !myTank.checkTankCollision(nextX, myTank.getY(), staticObjects)) {
-                        myTank.setX(nextX);
+                        // myTank.setX(nextX);
+                        gameSync.send_input('a');
                     }
                     break;
                 }
@@ -660,7 +662,8 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
                     myTank.setDirection(Direction::Right);
                     int nextX = myTank.getX() + 1;
                     if (nextX < gridWidth - 1 && !myTank.checkTankCollision(nextX, myTank.getY(), staticObjects)) {
-                        myTank.setX(nextX);
+                        // myTank.setX(nextX);
+                        gameSync.send_input('d');
                     }
                     break;
                 }
@@ -670,7 +673,7 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
                     break;
                 }
             }
-            */
+            /*
             switch (lastKey){
             case ' ':
                 gameSync.send_input(' ');
@@ -685,6 +688,7 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
                 break;
             }
             }
+            */
             lastKey = -1;   // Reset last key
             gameSync.update_tank(tankMap, staticObjects);
 
