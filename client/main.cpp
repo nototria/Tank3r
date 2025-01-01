@@ -685,16 +685,15 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
             case 's': gameSync.send_input('s');break;
             case 'a': gameSync.send_input('a');break;
             case 'd': gameSync.send_input('d');break;
-            case 'q': {
+            case 4: {
                 loopRunning = false;
+                state = GameState::RoomMenu;
                 break;
             }
             }
             lastKey = -1;   // Reset last key
             gameSync.update_tank(tankMap, staticObjects);
 
-            // TBD: Check for collision between bullets and tanks
-            // TBD: Remote tanks movement retrieval
             // Render updates
             werase(gridWin);
             renderStaticObjects(gridWin, staticObjects);

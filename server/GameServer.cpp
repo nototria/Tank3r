@@ -45,6 +45,7 @@ void GameServer::add_client(const int client_fd){
             //setting pollfd_list
             pollfd_list[i].fd=client_fd;
             pollfd_list[i].events=POLLRDNORM;
+            //clearn client_buffer
             client_buffer[i].clear();
             //call cli_mgr.add_client to init client data slot
             cli_mgr.add_client(i);
@@ -54,6 +55,7 @@ void GameServer::add_client(const int client_fd){
             write(client_fd,send_buffer,5);
             //store cli addr
             socklen_t addrlen=sizeof(client_udp_addr[i]);
+            memset(&client_udp_addr[i],0,sizeof(client_udp_addr[i]));
             getpeername(client_fd,(struct sockaddr*)this->client_udp_addr+i,&addrlen);
             return;
         }
@@ -63,6 +65,7 @@ void GameServer::add_client(const int client_fd){
 }
 
 void GameServer::rm_client(const int idx){
+    memset(this->client_udp_addr+idx,0,sizeof(this->client_udp_addr[idx]));
     //if the client is in a room
     if(this->cli_mgr.get_room_id(idx)>=0){
         this->exit_room(idx);
@@ -73,6 +76,13 @@ void GameServer::rm_client(const int idx){
     close(this->pollfd_list[idx].fd);
     //reset pollfd_list
     this->pollfd_list[idx].fd=-1;
+
+    // Reset client-specific data
+    pthread_mutex_lock(&input_buffer_mutex[idx]);
+    while(!input_buffer[idx].empty()) input_buffer[idx].pop();
+    pthread_mutex_unlock(&input_buffer_mutex[idx]);
+
+    client_buffer[idx].clear();
 }
 
 inline void GameServer::set_user_name(const int idx, const std::string &str){
@@ -82,16 +92,24 @@ inline void GameServer::set_user_name(const int idx, const std::string &str){
 
 void GameServer::join_room(const int idx, int room_id){
     int client_id=idx;
-    if(room_mgr.join_room(client_id,room_id)){
+    pthread_mutex_lock(&room_mgr_mutex);
+    int result_tmp=room_mgr.join_room(client_id,room_id);
+    pthread_mutex_unlock(&room_mgr_mutex);
+    if(result_tmp){
         //join successful
+        pthread_mutex_lock(&cli_mgr_mutex);
         cli_mgr.join_room(client_id,room_id);
+        pthread_mutex_unlock(&cli_mgr_mutex);
         //send joined room id to client
         memset(send_buffer,0,sizeof(send_buffer));
         snprintf(send_buffer,1024,"join%c%s\n",COMMAND_SEP,id2str(room_id));
         write(this->pollfd_list[idx].fd,send_buffer,10);
 
         //if this is the first player of the room
-        if(room_mgr.player_count(room_id)==1){
+        pthread_mutex_lock(&room_mgr_mutex);
+        result_tmp=room_mgr.player_count(room_id);
+        pthread_mutex_unlock(&room_mgr_mutex);
+        if(result_tmp==1){
             //notify the new host
             memset(send_buffer,0,sizeof(send_buffer));
             snprintf(send_buffer,1024,"host%c%s\n",COMMAND_SEP,id2str(room_id));
@@ -250,12 +268,12 @@ void* GameServer::udp_listen(void *obj_ptr){
 
     while(true){
         len=sizeof(udp_addr);
+        memset(self.udp_recv_buffer,0,sizeof(self.udp_recv_buffer));
         int n=recvfrom(self.udp_sock_fd,self.udp_recv_buffer,1024,0,(struct sockaddr*)&udp_addr,&len);
         if(n<=0){
             std::cerr<<"recvfrom error"<<std::endl;
             exit(1);
         }
-        if(self.udp_recv_buffer[n-1]=='\n') --n;//test
         self.udp_recv_buffer[n]='\0';
 
         std::cout<<"udp recv: {"<<self.udp_recv_buffer<<"}"<<std::endl;
@@ -274,7 +292,12 @@ void* GameServer::udp_listen(void *obj_ptr){
         else{
             std::cout<<"try to parse udp msg"<<std::endl;
             InputStruct tmp(self.udp_recv_buffer);
-            if(tmp.valid && self.cli_mgr.get_state(tmp.client_id)==ClientData::play){
+            if(
+                tmp.valid &&
+                self.cli_mgr.get_state(tmp.client_id)==ClientData::play &&
+                self.client_udp_addr[tmp.client_id].sin_addr.s_addr==udp_addr.sin_addr.s_addr &&
+                self.client_udp_addr[tmp.client_id].sin_port==udp_addr.sin_port
+            ){
                 pthread_mutex_lock(self.input_buffer_mutex+tmp.client_id);
                 self.input_buffer[tmp.client_id].push(tmp);//need mutex
                 pthread_mutex_unlock(self.input_buffer_mutex+tmp.client_id);
@@ -298,9 +321,11 @@ void* GameServer::game_loop(void *obj_ptr){
 
     int player_count=self.room_mgr.player_count(room_id);
     std::vector<int> client_id_list;
+    pthread_mutex_lock(&self.room_mgr_mutex);
     for(auto &client_id:self.room_mgr.get_clients(room_id)){
         client_id_list.push_back(client_id);
     }
+    pthread_mutex_unlock(&self.room_mgr_mutex);
 
     //generate map
     std::vector<MapObject> staticObjects = generateMap(
@@ -322,6 +347,7 @@ void* GameServer::game_loop(void *obj_ptr){
     GameTimer timer(0.128);
     while(loopRunning) if(timer.shouldUpdate()){
         for(auto &[client_id, this_tank]:tanks){
+            if(!this_tank.IsAlive()) continue;
             //handle client input and update objects
             pthread_mutex_lock(self.input_buffer_mutex+client_id);
             auto &in_buffer=self.input_buffer[client_id];
@@ -364,14 +390,15 @@ void* GameServer::game_loop(void *obj_ptr){
                 //generate msg
                 //[uf],client_id,x,y,direction,seq
                 memset(udp_send_buffer,0,sizeof(udp_send_buffer));
-                snprintf(udp_send_buffer,1024,"u,%s,%d,%d,%d,%d",
-                    id2str(client_id),this_tank.getX(),this_tank.getY(),
+                snprintf(udp_send_buffer,1024,"u,%.4d,%d,%d,%d,%d",
+                    client_id,this_tank.getX(),this_tank.getY(),
                     this_tank.getDirection(),in_buffer.front().seq
                 );
                 if(in_buffer.front().key==' ') udp_send_buffer[0]='f';
                 std::cout<<"send update msg: "<<udp_send_buffer<<std::endl;
                 //send update to every client
                 for(int i=0, len=strlen(udp_send_buffer);i<player_count;++i){
+                    if(!tanks[client_id_list[i]].IsAlive()) continue;
                     if(sendto(
                         self.udp_sock_fd,
                         udp_send_buffer,len,
@@ -397,11 +424,12 @@ void* GameServer::game_loop(void *obj_ptr){
         for(auto &client_id:getHitTankIds){
             tanks[client_id].setHP(tanks[client_id].getHP() - 1);
             memset(udp_send_buffer,0,sizeof(udp_send_buffer));
-            snprintf(udp_send_buffer,1024,"h,%s,%d",
-                id2str(client_id),tanks[client_id].getHP()
+            snprintf(udp_send_buffer,1024,"h,%.4d,%d",
+                client_id,tanks[client_id].getHP()
             );
             std::cout<<"send hp update msg: "<<udp_send_buffer<<std::endl;
             for(int i=0, len=strlen(udp_send_buffer);i<player_count;++i){
+                if(!tanks[client_id_list[i]].IsAlive()) continue;
                 if(sendto(
                     self.udp_sock_fd,
                     udp_send_buffer,len,
@@ -413,14 +441,35 @@ void* GameServer::game_loop(void *obj_ptr){
                 }
             }
             if(tanks[client_id].getHP()==0){
+                pthread_mutex_lock(&self.cli_mgr_mutex);
                 self.cli_mgr.rm_client(client_id);
+                pthread_mutex_unlock(&self.cli_mgr_mutex);
             }
-            if(tanks.size()==1){
+            if(self.room_mgr.player_count(room_id)==1){
                 loopRunning=false;
+                pthread_mutex_lock(&self.cli_mgr_mutex);
                 self.cli_mgr.rm_client(tanks.begin()->first);
+                pthread_mutex_unlock(&self.cli_mgr_mutex);
                 break;
             }
         }
+        pthread_mutex_lock(&self.cli_mgr_mutex);
+        for(auto &[client_id, tank]:tanks){
+            if(self.cli_mgr.get_state(client_id)!=ClientData::play) tank.setHP(0);
+            for(int i=0, len=strlen(udp_send_buffer);i<player_count;++i){
+                if(!tanks[client_id_list[i]].IsAlive()) continue;
+                if(sendto(
+                    self.udp_sock_fd,
+                    udp_send_buffer,len,
+                    0,(struct sockaddr*)(self.client_udp_addr+client_id_list[i]),
+                    sizeof(self.client_udp_addr[client_id_list[i]])
+                ) <0){
+                    std::cerr<<"sendto error "<<errno<<std::endl;
+                    //exit(1);
+                }
+            }
+        }
+        pthread_mutex_unlock(&self.cli_mgr_mutex);
         // usleep(50'000);
     }
 
