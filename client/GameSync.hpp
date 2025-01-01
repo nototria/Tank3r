@@ -28,7 +28,8 @@ public:
         udp_fd(connected_udp_fd),
         my_client_id(_client_id), seq(1),
         last_ack(_client_id,this_tank), is_running(false) {
-            std::string file_name=id2str(_client_id);
+            std::string file_name="test";
+            file_name+=id2str(_client_id);
             file_name+=".log";
             log_file.open(file_name);
             update_mutex = PTHREAD_MUTEX_INITIALIZER;
