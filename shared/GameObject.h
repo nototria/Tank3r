@@ -292,26 +292,28 @@ std::vector<int> checkBulletTankCollisions(std::map<int,Tank>& tanksMap) {
     return getHitTankIds;
 }
 
-void handleBulletCollisions(std::map<int,Tank>& tanksMap) {
-    auto checkCollisionWithBullet = [](Bullet& bullet1, Bullet& bullet2) {
-        return bullet1.getX() == bullet2.getX() && bullet1.getY() == bullet2.getY();
-    };
-    for(auto& [id, tank] : tanksMap) {
-        std::vector<Bullet>& bullets1 = tank.getBullets();
-        for(auto it1 = bullets1.begin(); it1 != bullets1.end(); ++it1) {
-            if(!it1->isActive()) continue;
-            for(auto& [id2, tank2] : tanksMap) {
-                if(id == id2) continue;
-                std::vector<Bullet>& bullets2 = tank2.getBullets();
-                for(auto it2 = bullets2.begin(); it2 != bullets2.end(); ++it2) {
-                    if(!it2->isActive()) continue;
-                    if(checkCollisionWithBullet(*it1, *it2)) {
-                        it1->setActive(false);
-                        it2->setActive(false);
-                    }
-                }
+void handleBulletCollisions(std::map<int, Tank>& tanksMap) {
+    std::vector<Bullet*> activeBullets;
+
+    // Collect all active bullets
+    for (auto& [id, tank] : tanksMap) {
+        for (Bullet& bullet : tank.getBullets()) {
+            if (bullet.isActive()) {
+                activeBullets.push_back(&bullet);
+            }
+        }
+    }
+
+    // Check collisions between bullets
+    for (size_t i = 0; i < activeBullets.size(); ++i) {
+        for (size_t j = i + 1; j < activeBullets.size(); ++j) {
+            if (activeBullets[i]->getX() == activeBullets[j]->getX() &&
+                activeBullets[i]->getY() == activeBullets[j]->getY()) {
+                activeBullets[i]->setActive(false);
+                activeBullets[j]->setActive(false);
             }
         }
     }
 }
+
 #endif // GAMEOBJECT_H
