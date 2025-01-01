@@ -11,14 +11,7 @@
 #include <unistd.h>
 #include <ncurses.h>
 #include <map>
-
-#define SCREEN_WIDTH 100
-#define SCREEN_HEIGHT 40
-const int statusBlockWidth = 25;
-const int statusBlockHeight = 10; 
-enum class Direction {Right, Left, Up, Down};
-enum class GameState {TitleScreen, UsernameInput, RoomMenu, InRoom, GameLoop, WinScreen, LoseScreen, TieScreen};
-enum class MapObjectType {empty, wall,water,bullet,tank};
+#include "GameParameters.h"
 
 // game timer
 class GameTimer {
