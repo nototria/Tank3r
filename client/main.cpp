@@ -892,7 +892,7 @@ int main(int argc, char* argv[]) {
     if(argc == 2){
         serverIP = argv[1];
     }else{
-        serverIP = serverIP;
+        serverIP = SERV_IP;
     }
     WINDOW *titleWin, *inputWin, *roomWin,*gameWin, *endWin;
     GameState state;
