@@ -80,12 +80,12 @@ bool RoomManager::exit_room(const int client_id, const int room_id){
     return 0;
 }
 
-void RoomManager::set_map_seed(const int room_id, const unsigned long seed){
+void RoomManager::set_map_seed(const int room_id, const int seed){
     auto &room_obj=this->room_data_list[room_id];
     room_obj.map_seed=seed;
 }
 
-const unsigned long RoomManager::get_map_seed(const int room_id) const{
+const int RoomManager::get_map_seed(const int room_id) const{
     auto &room_obj=this->room_data_list[room_id];
     return room_obj.map_seed;
 }

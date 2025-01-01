@@ -672,7 +672,10 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
             }
             */
             switch (lastKey){
-            case ' ': gameSync.send_input(' ');break;
+            case ' ':
+                gameSync.send_input(' ');
+                myTank.fireBullet();
+                break;
             case 'w': gameSync.send_input('w');break;
             case 's': gameSync.send_input('s');break;
             case 'a': gameSync.send_input('a');break;

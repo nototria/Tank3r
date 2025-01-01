@@ -37,7 +37,7 @@ public:
 };
 
 void GameSync::send_input(char key){
-    if(key!=' ') input_queue.emplace_back(InputStruct{key,this->my_client_id,seq++});
+    input_queue.emplace_back(InputStruct{key,this->my_client_id,seq++});
     write(udp_fd,input_queue.back().to_str().c_str(),input_queue.back().to_str().size());
 }
 
@@ -60,6 +60,7 @@ void GameSync::update_tank(std::map<int,Tank> &tanks, std::vector<MapObject> &st
                     tanks[update_queue.front().client_id].setDirection(update_queue.front().dir);
                 }
             }
+            break;
         case 'f':
             //remote tank fire
             if(update_queue.front().client_id!=this->my_client_id && tanks.find(update_queue.front().client_id)!=tanks.end()){
@@ -119,6 +120,8 @@ void GameSync::update_tank(std::map<int,Tank> &tanks, std::vector<MapObject> &st
             }
             break;
         }
+        preX=this_tank.getX();
+        preY=this_tank.getY();
     }
 }
 

@@ -125,7 +125,7 @@ void GameServer::start_game(const int room_id){
     }
     srand(time(0));
     room_mgr.set_map_seed(room_id,rand());//0~RAND_MAX
-    snprintf(send_buffer+str_idx,1024-str_idx,"seed,%lu\n",room_mgr.get_map_seed(room_id));
+    snprintf(send_buffer+str_idx,1024-str_idx,"seed,%d\n",room_mgr.get_map_seed(room_id));
     for(const auto &client_id:room_mgr.get_clients(room_id)){
         write(pollfd_list[client_id].fd,send_buffer,strlen(send_buffer));
     }
@@ -319,6 +319,7 @@ void* GameServer::game_loop(void *obj_ptr){
             //handle client input and update objects
             pthread_mutex_lock(self.input_buffer_mutex+client_id);
             auto &in_buffer=self.input_buffer[client_id];
+            bool flag=false;
             while(!in_buffer.empty()){
                 switch(in_buffer.front().key){
                 case 'w':
