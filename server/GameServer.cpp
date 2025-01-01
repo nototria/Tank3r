@@ -16,7 +16,7 @@ struct StartParam{
     StartParam(GameServer *_obj_ptr, const int _room_id): obj_ptr(_obj_ptr), room_id(_room_id){}
 };
 
-GameServer::GameServer(const int &server_fd, const int &udp_fd){
+GameServer::GameServer(const int &server_fd, const int &udp_fd): last_client_id(-1){
     this->client_count=0;
     //init pollfd list
     this->pollfd_list[MAX_CLIENTS].fd=server_fd;
@@ -41,22 +41,24 @@ inline bool GameServer::is_full() const{
 
 void GameServer::add_client(const int client_fd){
     for(int i=0;i<MAX_CLIENTS;++i){
-        if(pollfd_list[i].fd<0){//if this slot it empty
+        int idx=(last_client_id+i+1)%MAX_CLIENTS;
+        if(pollfd_list[idx].fd<0){//if this slot it empty
+            last_client_id=idx;
             //setting pollfd_list
-            pollfd_list[i].fd=client_fd;
-            pollfd_list[i].events=POLLRDNORM;
+            pollfd_list[idx].fd=client_fd;
+            pollfd_list[idx].events=POLLRDNORM;
             //clearn client_buffer
-            client_buffer[i].clear();
+            client_buffer[idx].clear();
             //call cli_mgr.add_client to init client data slot
-            cli_mgr.add_client(i);
+            cli_mgr.add_client(idx);
             //send client_id to client
             memset(send_buffer,0,sizeof(send_buffer));
-            snprintf(send_buffer,1024,"%s\n",id2str(i));
+            snprintf(send_buffer,1024,"%s\n",id2str(idx));
             write(client_fd,send_buffer,5);
             //store cli addr
-            socklen_t addrlen=sizeof(client_udp_addr[i]);
-            memset(&client_udp_addr[i],0,sizeof(client_udp_addr[i]));
-            getpeername(client_fd,(struct sockaddr*)this->client_udp_addr+i,&addrlen);
+            socklen_t addrlen=sizeof(client_udp_addr[idx]);
+            memset(&client_udp_addr[idx],0,sizeof(client_udp_addr[idx]));
+            getpeername(client_fd,(struct sockaddr*)this->client_udp_addr+idx,&addrlen);
             return;
         }
     }
