@@ -48,42 +48,46 @@ void GameSync::send_input(char key){
 }
 
 void GameSync::update_tank(std::map<int,Tank> &tanks, std::vector<MapObject> &staticObjects){
-    pthread_mutex_lock(&this->update_mutex);
-    while(!update_queue.empty()){
-        switch(update_queue.front().type){
+    while(true){
+        //get update item
+        pthread_mutex_lock(&this->update_mutex);
+        if(update_queue.empty()) break;
+        auto update_item=update_queue.front();
+        update_queue.pop_front();
+        pthread_mutex_unlock(&this->update_mutex);
+
+        switch(update_item.type){
         case 'u':
-            if(update_queue.front().client_id==this->my_client_id){
+            if(update_item.client_id==this->my_client_id){
                 //get last ack
-                if(this->last_ack.seq<update_queue.front().seq){
-                    this->last_ack=update_queue.front();
+                if(this->last_ack.seq<update_item.seq){
+                    this->last_ack=update_item;
                 }
             }
             else{
                 //update other tanks
-                if(tanks.find(update_queue.front().client_id)!=tanks.end()){
-                    tanks[update_queue.front().client_id].setX(update_queue.front().x);
-                    tanks[update_queue.front().client_id].setY(update_queue.front().y);
-                    tanks[update_queue.front().client_id].setDirection(update_queue.front().dir);
+                if(tanks.find(update_item.client_id)!=tanks.end()){
+                    tanks[update_item.client_id].setX(update_item.x);
+                    tanks[update_item.client_id].setY(update_item.y);
+                    tanks[update_item.client_id].setDirection(update_item.dir);
                 }
             }
             break;
         case 'f':
             //remote tank fire
-            if(update_queue.front().client_id!=this->my_client_id && tanks.find(update_queue.front().client_id)!=tanks.end()){
-                tanks[update_queue.front().client_id].fireBullet();
+            if(update_item.client_id!=this->my_client_id && tanks.find(update_item.client_id)!=tanks.end()){
+                tanks[update_item.client_id].fireBullet();
             }
             break;
         case 'h':
             //tank hp update
-            if(tanks.find(update_queue.front().client_id)!=tanks.end()){
-                tanks[update_queue.front().client_id].setHP(update_queue.front().value);
+            if(tanks.find(update_item.client_id)!=tanks.end()){
+                tanks[update_item.client_id].setHP(update_item.value);
             }
             break;
         default: break;
         }
-        update_queue.pop_front();
     }
-    pthread_mutex_unlock(&this->update_mutex);
 
     //apply client side prediction
     auto &this_tank=tanks[this->my_client_id];

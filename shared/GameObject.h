@@ -279,7 +279,7 @@ std::vector<int> checkBulletTankCollisions(std::map<int,Tank>& tanksMap) {
                 if (tank2.getX() == x && tank2.getY() == y) {
                     collisionDetected = true;
                     getHitTankIds.push_back(id2);
-                    tank2.setHP(tank2.getHP() - 1);
+                    //tank2.setHP(tank2.getHP() - 1);
                     it = bullets.erase(it);
                     break;
                 }

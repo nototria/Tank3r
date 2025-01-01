@@ -383,17 +383,17 @@ void* GameServer::game_loop(void *obj_ptr){
             for(auto &[client_id, this_tank]:tanks){
                 if(!this_tank.IsAlive()) continue;
                 this_tank.updateBullets(SCREEN_WIDTH,SCREEN_HEIGHT,staticObjects);
+                handleBulletCollisions(tanks);
             }
             //check collision
-            handleBulletCollisions(tanks);
             auto getHitTankIds=checkBulletTankCollisions(tanks);
-            /*
+            //update hp
             for(auto &client_id:getHitTankIds){
+                tanks[client_id].setHP(tanks[client_id].getHP() - 1);
                 snprintf(udp_send_buffer,1024,"h,%s,%d",
                     id2str(client_id),tanks[client_id].getHP()
                 );
             }
-            */
         }
     }
 
