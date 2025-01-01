@@ -878,7 +878,7 @@ void drawTieScreen(WINDOW* win) {
     wrefresh(win);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     // TBD: get other players info from server (playerNum)
     int playerNum = 4;
     std::string PlayerNames[playerNum];
@@ -886,9 +886,17 @@ int main() {
     std::map<int, std::string> id2Names;
     std::string username="";
     std::string roomId="";
+    std::string serverIP = "";
     int connfd = -1;
     int clientId = -1;
-
+    if(argc == 2){
+        std::string ip = argv[1];
+        if(ip != ""){
+            serverIP = ip;
+        }else{
+            serverIP = SERV_IP;
+        }
+    }
     WINDOW *titleWin, *inputWin, *roomWin,*gameWin, *endWin;
     GameState state;
     suppress_stderr();
