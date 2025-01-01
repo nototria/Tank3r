@@ -51,7 +51,10 @@ void GameSync::update_tank(std::map<int,Tank> &tanks, std::vector<MapObject> &st
     while(true){
         //get update item
         pthread_mutex_lock(&this->update_mutex);
-        if(update_queue.empty()) break;
+        if(update_queue.empty()){
+            pthread_mutex_unlock(&this->update_mutex);
+            break;
+        }
         auto update_item=update_queue.front();
         update_queue.pop_front();
         pthread_mutex_unlock(&this->update_mutex);
