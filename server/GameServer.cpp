@@ -314,13 +314,12 @@ void* GameServer::game_loop(void *obj_ptr){
         SCREEN_WIDTH,SCREEN_HEIGHT
     );
 
-    GameTimer timer(0.128);
     char udp_send_buffer[1024];
     
     bool loopRunning=true;
     int nextX, nextY;
-    while(loopRunning){
-        if(!timer.shouldUpdate()) continue;
+    GameTimer timer(0.128);
+    while(loopRunning) if(timer.shouldUpdate()){
         for(auto &[client_id, this_tank]:tanks){
             //handle client input and update objects
             pthread_mutex_lock(self.input_buffer_mutex+client_id);
@@ -386,10 +385,8 @@ void* GameServer::game_loop(void *obj_ptr){
             }
             pthread_mutex_unlock(self.input_buffer_mutex+client_id);
             //update bullets
-            for(auto &[client_id, this_tank]:tanks){
-                if(!this_tank.IsAlive()) continue;
+            if(this_tank.IsAlive()){
                 this_tank.updateBullets(SCREEN_WIDTH,SCREEN_HEIGHT,staticObjects);
-                handleBulletCollisions(tanks);
             }
             //check collision
             auto getHitTankIds=checkBulletTankCollisions(tanks);
@@ -400,8 +397,22 @@ void* GameServer::game_loop(void *obj_ptr){
                 snprintf(udp_send_buffer,1024,"h,%s,%d",
                     id2str(client_id),tanks[client_id].getHP()
                 );
+                std::cout<<"send hp update msg: "<<udp_send_buffer<<std::endl;
+                for(int i=0, len=strlen(udp_send_buffer);i<player_count;++i){
+                    if(sendto(
+                        self.udp_sock_fd,
+                        udp_send_buffer,len,
+                        0,(struct sockaddr*)(self.client_udp_addr+client_id_list[i]),
+                        sizeof(self.client_udp_addr[client_id_list[i]])
+                    ) <0){
+                        std::cerr<<"sendto error "<<errno<<std::endl;
+                        //exit(1);
+                    }
+                }
             }
         }
+        handleBulletCollisions(tanks);
+        usleep(100'000);
     }
 
     return NULL;

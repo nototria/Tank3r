@@ -578,7 +578,6 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
     keypad(gridWin, TRUE);
     nodelay(gridWin, TRUE);
     drawCustomBorder1(gridWin);
-    GameTimer timer(0.128); // 7.5 FPS
     bool loopRunning = true;
 
     //tanks
@@ -602,6 +601,7 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
     // game loop
     int lastKey = -1; // track the last key
     gameSync.start_inGame_listen();
+    GameTimer timer(0.128); // 7.5 FPS
     while (loopRunning) {
 
         // server side: playernum count simulation
