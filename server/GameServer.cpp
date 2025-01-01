@@ -138,6 +138,7 @@ void GameServer::start_game(const int room_id){
 
     room_mgr.start_game(room_id);
     for(auto &client_id:room_mgr.get_clients(room_id)){
+        while(!input_buffer[client_id].empty()) input_buffer[client_id].pop();
         cli_mgr.start_game(client_id);
     }
 
