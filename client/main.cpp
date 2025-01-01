@@ -18,9 +18,9 @@ void drawCustomBorder1(WINDOW* win);
 void drawCustomBorder2(WINDOW* win);
 void joinRoomById(WINDOW* win, std::string& roomId, int& connfd, int& clientId, std::string& username);
 void quickJoin(WINDOW* win, std::string& roomId, int& connfd, int& clientId, std::string& username);
-void RoomMenu(WINDOW* win, GameState& state, std::string& roomId, int& connfd, int& clientId, std::string& username);
+void RoomMenu(std::string serverIP, WINDOW* win, GameState& state, std::string& roomId, int& connfd, int& clientId, std::string& username);
 void InRoomMenu(WINDOW* win, GameState& state, std::string& roomId, int& connfd, int &playerNum);
-void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObject>& staticObjects, GameState& state, const int& clientId, int playerNum, std::map<int,std::string>&id2Names);
+void gameLoop(std::string serverIP, WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObject>& staticObjects, GameState& state, const int& clientId, int playerNum, std::map<int,std::string>&id2Names);
 void drawWinScreen(WINDOW* win);
 void drawLoseScreen(WINDOW* win);
 void drawTieScreen(WINDOW* win);
@@ -350,7 +350,7 @@ void quickJoin(WINDOW* win, std::string& roomId, int& connfd, int& clientId, std
     roomId = joinRoom(connfd, "-1");
 }
 
-void RoomMenu(WINDOW* win, GameState& state, std::string& roomId, int& connfd, int& clientId, std::string& username) {
+void RoomMenu(std::string serverIP, WINDOW* win, GameState& state, std::string& roomId, int& connfd, int& clientId, std::string& username) {
     setlocale(LC_ALL, "");
     keypad(win, TRUE);
     nodelay(win, TRUE); // non-blocking mode
@@ -426,7 +426,7 @@ void RoomMenu(WINDOW* win, GameState& state, std::string& roomId, int& connfd, i
                 switch (selectedOption+1) {
                     case 1:  // Join a room by ID
                         // connect to server
-                        if((connfd = connectToServer(SERV_IP, SERV_PORT)) == -1){
+                        if((connfd = connectToServer(serverIP.c_str(), SERV_PORT)) == -1){
                             werase(win);
                             mvwprintw(win, optionStartY + 0, optionStartX, "Failed to connect to the server");
                             wrefresh(win);
@@ -439,7 +439,7 @@ void RoomMenu(WINDOW* win, GameState& state, std::string& roomId, int& connfd, i
                         break;
                     case 2:  // Quick Join
                         // connect to server
-                        if((connfd = connectToServer(SERV_IP, SERV_PORT)) == -1){
+                        if((connfd = connectToServer(serverIP.c_str(), SERV_PORT)) == -1){
                             werase(win);
                             mvwprintw(win, optionStartY + 0, optionStartX, "Failed to connect to the server");
                             wrefresh(win);
@@ -556,7 +556,7 @@ void InRoomMenu(WINDOW* win, GameState& state, std::string& roomId, int& connfd,
     }
 }
 
-void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObject>& staticObjects, GameState& state, const int& clientId, int playerNum, std::map<int,std::string>&id2Names) {
+void gameLoop(std::string serverIP, WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObject>& staticObjects, GameState& state, const int& clientId, int playerNum, std::map<int,std::string>&id2Names) {
     // status windows
     int startX = (COLS - gridWidth) / 2, startY = (LINES - gridHeight) / 2;
     std::map<int, WINDOW*> StatusWin;
@@ -595,7 +595,7 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
     }
 
     //setup udp connection
-    int udpfd = connectUDP(SERV_IP, UDP_PORT);
+    int udpfd = connectUDP(serverIP.c_str(), UDP_PORT);
     GameSync gameSync(udpfd, clientId, myTank);
 
     // game loop
@@ -892,7 +892,7 @@ int main(int argc, char* argv[]) {
     if(argc == 2){
         serverIP = argv[1];
     }else{
-        serverIP = SERV_IP;
+        serverIP = serverIP;
     }
     WINDOW *titleWin, *inputWin, *roomWin,*gameWin, *endWin;
     GameState state;
@@ -916,7 +916,7 @@ int main(int argc, char* argv[]) {
             }
 
             case GameState::RoomMenu: {
-                RoomMenu(roomWin, state, roomId, connfd, clientId, username);
+                RoomMenu(serverIP, roomWin, state, roomId, connfd, clientId, username);
                 break;
             }
 
@@ -932,7 +932,7 @@ int main(int argc, char* argv[]) {
                 getStartInfo(connfd, playerNum, id2Names, seed);
                 //Generate static objects
                 std::vector<MapObject> staticObjects = generateMap(width, height, seed);
-                gameLoop(gameWin, width, height, staticObjects, state, clientId, playerNum, id2Names);
+                gameLoop(serverIP, gameWin, width, height, staticObjects, state, clientId, playerNum, id2Names);
                 close(connfd);
                 break;
             }
