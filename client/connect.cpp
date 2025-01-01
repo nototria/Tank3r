@@ -73,7 +73,7 @@ char* joinRoom(int sockfd, const char* roomId) {
     }
     if (write(sockfd, msg, strlen(msg)) < 0) return NULL;
 
-    char buf[64] = {0};
+    static char buf[64] = {0};
     int len;
     for(len=0;len<64;++len){
         if(read(sockfd,buf+len,1)<=0) break;
