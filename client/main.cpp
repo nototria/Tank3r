@@ -945,7 +945,7 @@ int main(int argc, char* argv[]) {
                 else if(state == GameState::TieScreen) drawTieScreen(endWin);
                 int ch = wgetch(endWin);
                 if (ch == 'r' || ch == 'R') {
-                    state = GameState::UsernameInput;
+                    state = GameState::RoomMenu;
                 }else if (ch == 'q' || ch == 'Q') {
                     running = false;
                 }
