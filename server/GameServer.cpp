@@ -6,6 +6,7 @@
 #include<netinet/in.h>
 #include<unistd.h>
 #include<map>
+#include<arpa/inet.h>
 #include"../shared/GameUtils.hpp"
 #include"../shared/GameObject.h"
 #include"../shared/map_generator.cpp"
@@ -261,7 +262,7 @@ void* GameServer::udp_listen(void *obj_ptr){
                 self.client_udp_addr[tmp_id].sin_addr.s_addr==udp_addr.sin_addr.s_addr
             ){
                 self.client_udp_addr[tmp_id].sin_port=udp_addr.sin_port;
-                std::cout<<"set client"<<self.udp_recv_buffer<<" udp port = "<<ntohs(udp_addr.sin_port)<<std::endl;
+                std::cout<<"set client"<<self.udp_recv_buffer<<" = "<<inet_ntoa(udp_addr.sin_addr)<<':'<<ntohs(udp_addr.sin_port)<<std::endl;
             }
         }
         else{
