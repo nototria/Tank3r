@@ -412,6 +412,14 @@ void* GameServer::game_loop(void *obj_ptr){
                     //exit(1);
                 }
             }
+            if(tanks[client_id].getHP()==0){
+                self.cli_mgr.rm_client(client_id);
+            }
+            if(tanks.size()==1){
+                loopRunning=false;
+                self.cli_mgr.rm_client(tanks.begin()->first);
+                break;
+            }
         }
         // usleep(50'000);
     }

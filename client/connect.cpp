@@ -128,6 +128,7 @@ void InRoomListen(int sockfd, bool &isHost, bool &startGame, int &playerNum){
 }
 
 void getStartInfo(const int sockfd, const int playerNum, std::map<int,std::string> &id2Name, int &seed){
+    id2Name.clear();
     char recv_buffer[1024];
     int len;
     for(int i=0;i<playerNum;++i){
