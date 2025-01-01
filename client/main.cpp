@@ -626,6 +626,7 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
         if (ch != ERR) {lastKey = ch;}
 
         if (timer.shouldUpdate()) {
+            /*
             switch (lastKey) {
                 case ' ': {
                     myTank.fireBullet();
@@ -674,7 +675,7 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
                     break;
                 }
             }
-            /*
+            */
             switch (lastKey){
             case ' ':
                 gameSync.send_input(' ');
@@ -689,7 +690,6 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
                 break;
             }
             }
-            */
             lastKey = -1;   // Reset last key
             gameSync.update_tank(tankMap, staticObjects);
 
