@@ -398,7 +398,6 @@ void* GameServer::game_loop(void *obj_ptr){
                 std::cout<<"send update msg: "<<udp_send_buffer<<std::endl;
                 //send update to every client
                 for(int i=0, len=strlen(udp_send_buffer);i<player_count;++i){
-                    if(!tanks[client_id_list[i]].IsAlive()) continue;
                     if(sendto(
                         self.udp_sock_fd,
                         udp_send_buffer,len,
@@ -416,9 +415,9 @@ void* GameServer::game_loop(void *obj_ptr){
             if(this_tank.IsAlive()){
                 this_tank.updateBullets(SCREEN_WIDTH,SCREEN_HEIGHT,staticObjects);
             }
+            handleBulletCollisions(tanks);
         }
         //check collision
-        handleBulletCollisions(tanks);
         auto getHitTankIds=checkBulletTankCollisions(tanks);
         //update hp
         for(auto &client_id:getHitTankIds){
@@ -429,7 +428,6 @@ void* GameServer::game_loop(void *obj_ptr){
             );
             std::cout<<"send hp update msg: "<<udp_send_buffer<<std::endl;
             for(int i=0, len=strlen(udp_send_buffer);i<player_count;++i){
-                if(!tanks[client_id_list[i]].IsAlive()) continue;
                 if(sendto(
                     self.udp_sock_fd,
                     udp_send_buffer,len,
@@ -445,19 +443,15 @@ void* GameServer::game_loop(void *obj_ptr){
                 self.cli_mgr.rm_client(client_id);
                 pthread_mutex_unlock(&self.cli_mgr_mutex);
             }
-            if(self.room_mgr.player_count(room_id)==1){
-                loopRunning=false;
-                pthread_mutex_lock(&self.cli_mgr_mutex);
-                self.cli_mgr.rm_client(tanks.begin()->first);
-                pthread_mutex_unlock(&self.cli_mgr_mutex);
-                break;
-            }
         }
-        pthread_mutex_lock(&self.cli_mgr_mutex);
-        for(auto &[client_id, tank]:tanks){
-            if(self.cli_mgr.get_state(client_id)!=ClientData::play) tank.setHP(0);
+        //detect disconnect
+        for(auto &[cliend_id, tank]:tanks){
+            if(self.cli_mgr.get_state(cliend_id)==ClientData::play || !tank.IsAlive()) continue;
+            tank.setHP(0);
+            memset(udp_send_buffer,0,sizeof(udp_send_buffer));
+            snprintf(udp_send_buffer,1024,"h,%.4d,%d",cliend_id,0);
+            std::cout<<"send hp update msg: "<<udp_send_buffer<<std::endl;
             for(int i=0, len=strlen(udp_send_buffer);i<player_count;++i){
-                if(!tanks[client_id_list[i]].IsAlive()) continue;
                 if(sendto(
                     self.udp_sock_fd,
                     udp_send_buffer,len,
@@ -469,7 +463,14 @@ void* GameServer::game_loop(void *obj_ptr){
                 }
             }
         }
-        pthread_mutex_unlock(&self.cli_mgr_mutex);
+        //detect game over
+        if(self.room_mgr.player_count(room_id)<=1){
+            loopRunning=false;
+            pthread_mutex_lock(&self.cli_mgr_mutex);
+            self.cli_mgr.rm_client(tanks.begin()->first);
+            pthread_mutex_unlock(&self.cli_mgr_mutex);
+            break;
+        }
         // usleep(50'000);
     }
 
