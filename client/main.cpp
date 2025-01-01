@@ -890,12 +890,9 @@ int main(int argc, char* argv[]) {
     int connfd = -1;
     int clientId = -1;
     if(argc == 2){
-        std::string ip = argv[1];
-        if(ip != ""){
-            serverIP = ip;
-        }else{
-            serverIP = SERV_IP;
-        }
+        serverIP = argv[1];
+    }else{
+        serverIP = SERV_IP;
     }
     WINDOW *titleWin, *inputWin, *roomWin,*gameWin, *endWin;
     GameState state;
