@@ -79,5 +79,24 @@ struct UpdateStruct{
         }
         this->seq=std::stoi(tmp1);
     }
+    std::string to_str(){
+        std::string res;
+        res.push_back(this->type);
+        res.push_back(COMMAND_SEP);
+        res+=std::to_string(this->client_id);
+        res.push_back(COMMAND_SEP);
+        if(this->type=='h'){
+            res+=std::to_string(this->value);
+            return res;
+        }
+        res+=std::to_string(this->x);
+        res.push_back(COMMAND_SEP);
+        res+=std::to_string(this->y);
+        res.push_back(COMMAND_SEP);
+        res+=std::to_string((int)(this->dir));
+        res.push_back(COMMAND_SEP);
+        res+=std::to_string(this->seq);
+        return res;
+    }
 };
 #endif

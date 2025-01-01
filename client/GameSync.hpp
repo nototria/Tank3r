@@ -8,6 +8,7 @@
 #include"../shared/InputStruct.hpp"
 #include"../shared/UpdateStruct.hpp"
 #include<poll.h>
+#include<fstream>
 class GameSync{
 private:
     std::deque<InputStruct> input_queue;
@@ -21,11 +22,15 @@ private:
     int seq;
     static void* udp_listen(void *obj_ptr);
     bool is_running;
+    std::ofstream log_file;
 public:
     GameSync(const int connected_udp_fd, int _client_id, const Tank &this_tank):
         udp_fd(connected_udp_fd),
         my_client_id(_client_id), seq(1),
         last_ack(_client_id,this_tank), is_running(false) {
+            std::string file_name=id2str(_client_id);
+            file_name+=".log";
+            log_file.open(file_name);
             update_mutex = PTHREAD_MUTEX_INITIALIZER;
         };
     void send_input(char key);
@@ -37,7 +42,7 @@ public:
 };
 
 void GameSync::send_input(char key){
-    input_queue.emplace_back(InputStruct{key,this->my_client_id,seq++});
+    input_queue.emplace_back(key,this->my_client_id,seq++);
     write(udp_fd,input_queue.back().to_str().c_str(),input_queue.back().to_str().size());
 }
 
@@ -138,10 +143,12 @@ void* GameSync::udp_listen(void *obj_ptr){
         if(pollfd_list[0].revents & (POLLRDNORM | POLLERR)){
             int n=read(pollfd_list[0].fd,recv_buffer,1024);
             recv_buffer[n]='\0';
+            self.log_file<<"recv "<<recv_buffer<<std::endl;
             UpdateStruct tmp(recv_buffer);
             if(tmp.valid){
                 pthread_mutex_lock(&self.update_mutex);
                 self.update_queue.push_back(tmp);
+                self.log_file<<"store "<<tmp.to_str()<<std::endl;
                 pthread_mutex_unlock(&self.update_mutex);
             }
         }
