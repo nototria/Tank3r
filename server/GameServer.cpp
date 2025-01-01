@@ -49,6 +49,7 @@ void GameServer::add_client(const int client_fd){
             //call cli_mgr.add_client to init client data slot
             cli_mgr.add_client(i);
             //send client_id to client
+            memset(send_buffer,0,sizeof(send_buffer));
             snprintf(send_buffer,1024,"%s\n",id2str(i));
             write(client_fd,send_buffer,5);
             //store cli addr
@@ -85,12 +86,14 @@ void GameServer::join_room(const int idx, int room_id){
         //join successful
         cli_mgr.join_room(client_id,room_id);
         //send joined room id to client
+        memset(send_buffer,0,sizeof(send_buffer));
         snprintf(send_buffer,1024,"join%c%s\n",COMMAND_SEP,id2str(room_id));
         write(this->pollfd_list[idx].fd,send_buffer,10);
 
         //if this is the first player of the room
         if(room_mgr.player_count(room_id)==1){
             //notify the new host
+            memset(send_buffer,0,sizeof(send_buffer));
             snprintf(send_buffer,1024,"host%c%s\n",COMMAND_SEP,id2str(room_id));
             write(this->pollfd_list[idx].fd,send_buffer,10);
         }
@@ -108,6 +111,7 @@ void GameServer::exit_room(const int idx){
     int room_id=cli_mgr.get_room_id(client_id);
     if(room_mgr.exit_room(client_id,room_id)){
         //if host change
+        memset(send_buffer,0,sizeof(send_buffer));
         snprintf(send_buffer,1024,"host%c%s\n",COMMAND_SEP,id2str(room_id));
         write(this->pollfd_list[room_mgr.get_host_id(room_id)].fd,send_buffer,10);
     }
@@ -117,6 +121,7 @@ void GameServer::exit_room(const int idx){
 void GameServer::start_game(const int room_id){
     //generate message
     //start,player_count\nclient_id,user_name\nclient_id,user_name\n...
+    memset(send_buffer,0,sizeof(send_buffer));
     snprintf(send_buffer,1024,"start,%d\n",room_mgr.player_count(room_id));
     int str_idx=strlen(send_buffer);
     for(const auto &client_id:room_mgr.get_clients(room_id)){
@@ -358,6 +363,7 @@ void* GameServer::game_loop(void *obj_ptr){
                 }
                 //generate msg
                 //[uf],client_id,x,y,direction,seq
+                memset(udp_send_buffer,0,sizeof(udp_send_buffer));
                 snprintf(udp_send_buffer,1024,"u,%s,%d,%d,%d,%d",
                     id2str(client_id),this_tank.getX(),this_tank.getY(),
                     this_tank.getDirection(),in_buffer.front().seq
@@ -390,6 +396,7 @@ void* GameServer::game_loop(void *obj_ptr){
             //update hp
             for(auto &client_id:getHitTankIds){
                 tanks[client_id].setHP(tanks[client_id].getHP() - 1);
+                memset(udp_send_buffer,0,sizeof(udp_send_buffer));
                 snprintf(udp_send_buffer,1024,"h,%s,%d",
                     id2str(client_id),tanks[client_id].getHP()
                 );
