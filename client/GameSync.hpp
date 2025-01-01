@@ -69,10 +69,11 @@ void GameSync::update_tank(std::map<int,Tank> &tanks, std::vector<MapObject> &st
             }
             else{
                 //update other tanks
-                if(tanks.find(update_item.client_id)!=tanks.end()){
-                    tanks[update_item.client_id].setX(update_item.x);
-                    tanks[update_item.client_id].setY(update_item.y);
-                    tanks[update_item.client_id].setDirection(update_item.dir);
+                auto it = tanks.find(update_item.client_id);
+                if(it != tanks.end()){
+                    it->second.setX(update_item.x);
+                    it->second.setY(update_item.y);
+                    it->second.setDirection(update_item.dir);
                 }
             }
             break;
@@ -109,6 +110,7 @@ void GameSync::update_tank(std::map<int,Tank> &tanks, std::vector<MapObject> &st
             nextY=preY-1;
             if(nextY>0 && !this_tank.checkTankCollision(preX,nextY,staticObjects)){
                 this_tank.setY(nextY);
+                preY=nextY;
             }
             break;
         case 'a':
@@ -116,6 +118,7 @@ void GameSync::update_tank(std::map<int,Tank> &tanks, std::vector<MapObject> &st
             nextX=preX-1;
             if(nextX>0 && !this_tank.checkTankCollision(nextX,preY,staticObjects)){
                 this_tank.setX(nextX);
+                preX=nextX;
             }
             break;
         case 's':
@@ -123,6 +126,7 @@ void GameSync::update_tank(std::map<int,Tank> &tanks, std::vector<MapObject> &st
             nextY=preY+1;
             if(nextY<SCREEN_HEIGHT-1 && !this_tank.checkTankCollision(preX,nextY,staticObjects)){
                 this_tank.setY(nextY);
+                preY=nextY;
             }
             break;
         case 'd':
@@ -130,11 +134,10 @@ void GameSync::update_tank(std::map<int,Tank> &tanks, std::vector<MapObject> &st
             nextX=preX+1;
             if(nextX<SCREEN_WIDTH-1 && !this_tank.checkTankCollision(nextX,preY,staticObjects)){
                 this_tank.setX(nextX);
+                preX=nextX;
             }
             break;
         }
-        preX=this_tank.getX();
-        preY=this_tank.getY();
     }
 }
 
