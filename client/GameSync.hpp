@@ -104,6 +104,7 @@ void GameSync::update_tank(std::map<int,Tank> &tanks, std::vector<MapObject> &st
     int preY = last_ack.y;
     int nextX, nextY;
     for(auto &item:input_queue){
+        log_file<<"apply "<<item.to_str()<<std::endl;
         switch(item.key){
         case 'w':
             this_tank.setDirection(Direction::Up);
