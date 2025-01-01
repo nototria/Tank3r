@@ -292,6 +292,16 @@ std::vector<int> checkBulletTankCollisions(std::map<int,Tank>& tanksMap) {
     return getHitTankIds;
 }
 
+void cleanupInactiveBullets(std::map<int, Tank>& tanksMap) {
+    for (auto& [id, tank] : tanksMap) {
+        std::vector<Bullet>& bullets = tank.getBullets();
+        bullets.erase(
+            std::remove_if(bullets.begin(), bullets.end(),
+                           [](const Bullet& b) { return !b.isActive(); }),
+            bullets.end());
+    }
+}
+
 void handleBulletCollisions(std::map<int, Tank>& tanksMap) {
     std::vector<Bullet*> activeBullets;
 
@@ -317,16 +327,6 @@ void handleBulletCollisions(std::map<int, Tank>& tanksMap) {
 
     // Clean up inactive bullets
     cleanupInactiveBullets(tanksMap);
-}
-
-void cleanupInactiveBullets(std::map<int, Tank>& tanksMap) {
-    for (auto& [id, tank] : tanksMap) {
-        std::vector<Bullet>& bullets = tank.getBullets();
-        bullets.erase(
-            std::remove_if(bullets.begin(), bullets.end(),
-                           [](const Bullet& b) { return !b.isActive(); }),
-            bullets.end());
-    }
 }
 
 #endif // GAMEOBJECT_H
