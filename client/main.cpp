@@ -629,6 +629,7 @@ void gameLoop(WINDOW* gridWin, int gridWidth, int gridHeight, std::vector<MapObj
             switch (lastKey) {
                 case ' ': {
                     myTank.fireBullet();
+                    gameSync.send_input(' ');
                     break;
                 }
                 case 'w': {
