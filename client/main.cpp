@@ -305,7 +305,7 @@ void handleUsernameInput(WINDOW* win, std::string& username) {
     curs_set(0);
 }
 
-void joinRoomById(WINDOW* win, std::string& roomId, int& connfd, int& clientId, std::string& username) {
+void joinRoomById(WINDOW* win, std::string& roomId, int& connfd, int& clientId, std::string& username, GameState& state) {
     // Prompt user to enter a room ID
     nodelay(win, FALSE); // Blocking mode
     wattron(win, COLOR_PAIR(COLOR_YELLOW));
@@ -335,7 +335,15 @@ void joinRoomById(WINDOW* win, std::string& roomId, int& connfd, int& clientId, 
     // do the actual connection
     clientId = receiveClientId(connfd);
     sendUserName(connfd, clientId, username.c_str());
-    joinRoom(connfd, roomId.c_str());
+    if(joinRoom(connfd, roomId.c_str())==NULL){
+        werase(win);
+        mvwprintw(win, 18, 35, "Room %s is full. QAQ", roomId.c_str());
+        wrefresh(win);
+        napms(2000);
+        return;
+    }else{
+        state = GameState::InRoom;
+    }
 }
 
 void quickJoin(WINDOW* win, std::string& roomId, int& connfd, int& clientId, std::string& username) {
@@ -433,8 +441,7 @@ void RoomMenu(std::string serverIP, WINDOW* win, GameState& state, std::string& 
                             napms(2000);
                             return;
                         }else{
-                            state = GameState::InRoom;
-                            joinRoomById(win, roomId, connfd, clientId, username);
+                            joinRoomById(win, roomId, connfd, clientId, username, state);
                         }
                         break;
                     case 2:  // Quick Join
