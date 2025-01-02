@@ -16,7 +16,7 @@ void drawTitleScreen(WINDOW* win);
 void drawUsernameInput(WINDOW* win, const std::string& username);
 void drawCustomBorder1(WINDOW* win);
 void drawCustomBorder2(WINDOW* win);
-void joinRoomById(WINDOW* win, std::string& roomId, int& connfd, int& clientId, std::string& username);
+void joinRoomById(WINDOW* win, std::string& roomId, int& connfd, int& clientId, std::string& username, GameState& state);
 void quickJoin(WINDOW* win, std::string& roomId, int& connfd, int& clientId, std::string& username);
 void RoomMenu(std::string serverIP, WINDOW* win, GameState& state, std::string& roomId, int& connfd, int& clientId, std::string& username);
 void InRoomMenu(WINDOW* win, GameState& state, std::string& roomId, int& connfd, int &playerNum);
