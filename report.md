@@ -190,8 +190,15 @@ struct UpdateStruct{
 - ```send_input``` \
 將 input 存到 input_buffer 和送往 server
 - ```update_tank```\
-從 update_buffer 抓資料，並使用 client side prediction\
-算出每台 tank 該在的位置
+此 function 負責執行 client side prediction\
+從 update_buffer 抓資料並將 input_buffer 內\
+seq number <= 最新 update  seq number 的 input 清除\
+由最新的 update 和 input_buffer 的內容算出 local player tank 的位置\
+其他非本機玩家的位置則直接由 update 決定\
+這個 function 也會更新玩家的其他資料
+- ```start_inGame_list```\
+創造一個 thread 去接收 server 傳送的 update，\
+並將資料存進 update_buffer
 
 ## Client
 
