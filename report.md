@@ -48,10 +48,10 @@ Arch Linux / macOS / Ubuntu
     - 接收與傳送資訊給 server
 
 ## Server
-- 使用 ```poll.h``` 做 multiplexing 來同時和多個 client 用TCP進行溝通
-- 使用 ```pthread.h``` 開出 listen 遊戲操作的 thread
-- 使用 ```pthread.h``` 為每個 room 開出一個 thread 來執行game loop
-- 使用 ```queue```, ```stringstream``` 來作為輸入 buffer 並在 threads 之間共享資料
+- 使用 `poll.h` 做 multiplexing 來同時和多個 client 用TCP進行溝通
+- 使用 `pthread.h` 開出 listen 遊戲操作的 thread
+- 使用 `pthread.h` 為每個 room 開出一個 thread 來執行game loop
+- 使用 `queue`, `stringstream` 來作為輸入 buffer 並在 threads 之間共享資料
 - 遵循 OOP 及 composite pattern 來梳理程式碼和隱藏實作細節
 
 ## Client
@@ -71,7 +71,7 @@ Arch Linux / macOS / Ubuntu
 
 ### 資料同步
 
-實作 ```GameSync``` class
+實作 `GameSync` class
 - 將遊戲操作送給 server
 - 接收 server 的更新
 - 控制遊戲物件
@@ -79,7 +79,7 @@ Arch Linux / macOS / Ubuntu
 
 ## 資料傳輸格式
 
-```client_id```和```room_id``` 為4位數數字
+`client_id`和`room_id` 為4位數數字
 
 ### 連線及房間系統
 
@@ -87,19 +87,19 @@ Arch Linux / macOS / Ubuntu
 
 #### client 指令
 
-- "```client_id```,```user_name```\\n"\
-設定 ```cliend_id``` 的 ```user_name```
-- "join,```room_id```\\n"\
-請求加入 ```room_id``` 的房間，若 ```room_id``` 為 -1 則隨機加入
-- "start,```room_id```\\n"\
+- "`client_id`,`user_name`\\n"\
+設定 `cliend_id` 的 `user_name`
+- "join,`room_id`\\n"\
+請求加入 `room_id` 的房間，若 `room_id` 為 -1 則隨機加入
+- "start,`room_id`\\n"\
 房主可以請求開始遊戲
 
 #### server 回覆
 
-- "```client_id```\\n"\
-告知 client 的```client_id```
-- "join,```room_id```\\n"\
-告知 client 成功加入 ```room_id```
+- "`client_id`\\n"\
+告知 client 的`client_id`
+- "join,`room_id`\\n"\
+告知 client 成功加入 `room_id`
 - "fail\\n"\
 告知 start 或 join 操作失敗
 
@@ -120,12 +120,13 @@ struct InputStruct{
 ```
 由 client 送往 server\
 在 server 端，這個 constructor 會嘗試解析字串，\
-若解析成功則```valid```為```true```。
+若解析成功則`valid`為`true`。
 
 **字串格式**
-- "```key```,```client_id```,```seq```"
+- "`key`,`client_id`,`seq`"
 
-```key``` 是按鍵，只會有 { 'w', 'a' 's' 'd' ' '}\```seq``` 是操作的 sequence number ，用於 client side prediction
+`key` 是按鍵，只會有 { 'w', 'a', 's', 'd', ' '}\
+`seq` 是操作的 sequence number ，用於 client side prediction
 
 #### 遊戲更新
 ```cpp
@@ -143,11 +144,11 @@ struct UpdateStruct{
 由 server 送往 client
 
 **字串格式**
-- "u,```client_id```,```x```,```y```,```direction```,```seq```"\
+- "u,`client_id`,`x`,`y`,`direction`,`seq`"\
 更新坦克座標
-- "f,```client_id```,```x```,```y```,```direction```,```seq```"\
+- "f,`client_id`,`x`,`y`,`direction`,`seq`"\
 坦克開火
-- "h,```client_id```,```health```"\
+- "h,`client_id`,`health`"\
 更新坦克血量
 
 
@@ -162,24 +163,24 @@ struct UpdateStruct{
 ### 實作細節
 
 #### ClientManager.hpp/cpp
-定義 ```ClientData``` class\
-以 ```client_id``` 管理不同 client 的狀態
+定義 `ClientData` class\
+以 `client_id` 管理不同 client 的狀態
 
 #### RoomManager.hpp/cpp
-定義 ```RoomData``` class\
-以 ```room_id``` 管理不同 room 的狀態
+定義 `RoomData` class\
+以 `room_id` 管理不同 room 的狀態
 
 #### InputStruct.hpp
-定義 ```InputStruct``` ，作為儲存於 buffer 中的類別\
+定義 `InputStruct` ，作為儲存於 buffer 中的類別\
 以及解析字串用的 constructor
 
 #### UpdateStruct.hpp
-定義 ```UpdateStruct``` ，作為儲存於 buffer 中的類別\
+定義 `UpdateStruct` ，作為儲存於 buffer 中的類別\
 以及解析字串用的 constructor
 
 #### GameServer.hpp/cpp
 負責管理連線、解析指令、發送指令、\
-呼叫 ```ClientData``` 和 ```RoomData``` 對應的 member function、執行 game loop\
+呼叫 `ClientData` 和 `RoomData` 對應的 member function、執行 game loop\
 運用 threading，將 UDP listen 和 game loop 分到其他的 thread\
 使得以上操作可以同時進行
 
@@ -187,16 +188,16 @@ struct UpdateStruct{
 在 client 端使用\
 建立一個 thread 來接收 server 傳送的遊戲更新\
 **member functions**
-- ```send_input``` \
+- `send_input` \
 將 input 存到 input_buffer 和送往 server
-- ```update_tank```\
+- `update_tank`\
 此 function 負責執行 client side prediction\
 從 update_buffer 抓資料並將 input_buffer 內\
 seq number <= 最新 update  seq number 的 input 清除\
 由最新的 update 和 input_buffer 的內容算出 local player tank 的位置\
 其他非本機玩家的位置則直接由 update 決定\
 這個 function 也會更新玩家的其他資料
-- ```start_inGame_list```\
+- `start_inGame_list`\
 創造一個 thread 去接收 server 傳送的 update，\
 並將資料存進 update_buffer
 
@@ -267,6 +268,9 @@ Server 能夠改進的地方
 <!--
 <code style="background-color:powderblue;">：參考文獻列表、原始程式碼等。</code>
 -->
+## 附錄
+[source code](https://github.com/nototria/Tank3r)
+## 文獻
 [client-server-game-architecture](https://www.gabrielgambetta.com/client-server-game-architecture.html)
 https://shengyu7697.github.io/cpp-ncurses/
 
