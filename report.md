@@ -53,7 +53,63 @@ Arch Linux / macOS / Ubuntu
 - 使用 `pthread.h` 開出 listen 遊戲操作的 thread
 - 使用 `pthread.h` 為每個 room 開出一個 thread 來執行game loop
 - 使用 `queue`, `stringstream` 來作為輸入 buffer 並在 threads 之間共享資料
-- 遵循 OOP 及 composite pattern 來梳理程式碼和隱藏實作細節
+
+### 資料傳輸格式
+#### 連線及房間系統
+`client_id`和`room_id` 為4位數數字
+- **client 指令**
+    - "`client_id`,`user_name`\\n"\
+    設定 `cliend_id` 的 `user_name`
+    - "join,`room_id`\\n"\
+    請求加入 `room_id` 的房間，若 `room_id` 為 -1 則隨機加入
+    - "exit,`room_id`\\n"\
+    離開房間
+    - "start,`room_id`\\n"\
+    房主可以請求開始遊戲
+
+- **server 回覆**
+    - "`client_id`\\n"\
+    告知 client 的`client_id`
+    - "join,`room_id`\\n"\
+    告知 client 成功加入 `room_id`
+    - "fail\\n"\
+    告知 start 或 join 操作失敗
+    - "host,`room_id`\n"
+    告知此 client 為房主
+    - "start,`player_count`\\n`client_id`,`user_name`\\n...seed,`seed_number`\n"
+    開始遊戲的必要資訊
+
+#### 遊戲通訊
+- **遊戲操作**
+    - "`key`,`client_id`,`seq`"\
+    `key` 是按鍵，只會有 { 'w', 'a', 's', 'd', ' '}\
+    `seq` 是操作的 sequence number ，用於 client side prediction
+- **遊戲更新**
+    - "u,`client_id`,`x`,`y`,`direction`,`seq`"\
+    更新坦克座標
+    - "f,`client_id`,`x`,`y`,`direction`,`seq`"\
+    坦克開火
+    - "h,`client_id`,`health`"\
+    更新坦克血量
+
+### 互動規則
+- 建立連線
+    1. client 由 TCP 連線到 server
+    2. server 傳送 "`client_id`\\n"，
+    3. client 傳送 "`client_id`,`user_name`\\n"
+    4. client 傳送 "join,`room_id`\\n"
+    5. server 回傳 "fail\n" 代表加入失敗，"join,`room_id`\\n"代表加入成功
+- 在房間中
+    - client 收到 "host,`room_id`\\n" 代表此 client 成為房主
+    - client 送出 "exit,`room_id`\\n" 以退出房間， server 會通知新成為房主的 client
+    - client 斷線則等同於退出房間
+    - 房主送出 "start,`room_id`\\n"，若房間至少有兩個人就會開始遊戲
+- 開始遊戲
+    1. server 送出 "start,`player_count`\\n`client_id`,`user_name`\\n...seed,`seed_number`\n"
+    2. server 和 client 間開始用 UDP 同步遊戲資訊
+    3. client 血量歸 0 後切斷 TCP 連線
+    4. 若 client 斷線則視為退出遊戲，血量歸 0
+    5. 最後存活者勝利並且斷開 TCP 連線
 
 ## Client
 
@@ -79,84 +135,6 @@ Arch Linux / macOS / Ubuntu
 - 控制遊戲物件
 - 實作 client side prediction
 
-## 資料傳輸格式
-
-`client_id`和`room_id` 為4位數數字
-
-### 連線及房間系統
-
-使用TCP傳輸
-
-#### client 指令
-
-- "`client_id`,`user_name`\\n"\
-設定 `cliend_id` 的 `user_name`
-- "join,`room_id`\\n"\
-請求加入 `room_id` 的房間，若 `room_id` 為 -1 則隨機加入
-- "start,`room_id`\\n"\
-房主可以請求開始遊戲
-
-#### server 回覆
-
-- "`client_id`\\n"\
-告知 client 的`client_id`
-- "join,`room_id`\\n"\
-告知 client 成功加入 `room_id`
-- "fail\\n"\
-告知 start 或 join 操作失敗
-
-### 遊戲通訊
-
-使用UDP傳輸
-
-#### 遊戲操作
-```cpp
-struct InputStruct{
-    char key;
-    int client_id;
-    int seq;
-    bool valid;
-    InputStruct(char _key, int _client_id, int _seq);
-    InputStruct(std::string str);
-};
-```
-由 client 送往 server\
-在 server 端，這個 constructor 會嘗試解析字串，\
-若解析成功則`valid`為`true`。
-
-**字串格式**
-- "`key`,`client_id`,`seq`"
-
-`key` 是按鍵，只會有 { 'w', 'a', 's', 'd', ' '}\
-`seq` 是操作的 sequence number ，用於 client side prediction
-
-#### 遊戲更新
-```cpp
-struct UpdateStruct{
-    char type;
-    int client_id;
-    int x,y;
-    Direction dir;
-    int value;
-    int seq;
-    bool valid;
-    UpdateStruct(std::string str);
-};
-```
-由 server 送往 client
-
-**字串格式**
-
-- "u,`client_id`,`x`,`y`,`direction`,`seq`"\
-更新坦克座標
-
-- "f,`client_id`,`x`,`y`,`direction`,`seq`"\
-坦克開火
-
-- "h,`client_id`,`health`"\
-更新坦克血量
-
-
 # 成果
 
 <!--
@@ -164,6 +142,11 @@ struct UpdateStruct{
 -->
 
 ## Server
+
+### 特色
+
+- 使用一個 UDP port 和所有 client 通訊
+- 採用 composite 的方式，將不同功能分離
 
 ### 實作細節
 
