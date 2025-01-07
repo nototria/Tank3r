@@ -74,9 +74,9 @@ Arch Linux / macOS / Ubuntu
     告知 client 成功加入 `room_id`
     - "fail\\n"\
     告知 start 或 join 操作失敗
-    - "host,`room_id`\n"
+    - "host,`room_id`\\n"
     告知此 client 為房主
-    - "start,`player_count`\\n`client_id`,`user_name`\\n...seed,`seed_number`\n"
+    - "start,`player_count`\\n`client_id`,`user_name`\\n...seed,`seed_number`\\n"
     開始遊戲的必要資訊
 
 #### 遊戲通訊
