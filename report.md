@@ -35,7 +35,8 @@ Arch Linux / macOS / Ubuntu
 -->
 因爲是即時線上射擊遊戲(FPS)，client 必須負責部大部分運算以及渲染工作，再經由 GameSync 與 server 交互即時資訊，利用 UDP 以降低延遲。
 
-在遊戲間 Server/Client 端會執行的邏輯有：
+在遊戲間 Server/Client 端會執行的邏輯有:
+
 - server:
     - 坦克移動
     - 子彈命中
@@ -279,7 +280,7 @@ Server 能夠改進的地方
 [source code](https://github.com/nototria/Tank3r)
 
 ## 文獻
-[client-server-game-architecture](https://www.gabrielgambetta.com/client-server-game-architecture.html)
+[client-server-game-architecture](https://www.gabrielgambetta.com/client-server-game-architecture.html) \
 [ncurses](https://shengyu7697.github.io/cpp-ncurses/)
 
 --------------------
