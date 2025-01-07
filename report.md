@@ -55,8 +55,12 @@ Arch Linux / macOS / Ubuntu
 - 使用 `queue`, `stringstream` 來作為輸入 buffer 並在 threads 之間共享資料
 
 ### 資料傳輸格式
+
 #### 連線及房間系統
-`client_id`和`room_id` 為4位數數字
+
+
+`client_id`和`room_id` 為4位數數字 \
+
 - **client 指令**
     - "`client_id`,`user_name`\\n"\
     設定 `cliend_id` 的 `user_name`
@@ -80,10 +84,10 @@ Arch Linux / macOS / Ubuntu
     開始遊戲的必要資訊
 
 #### 遊戲通訊
-- **遊戲操作**
-    - "`key`,`client_id`,`seq`"\
-    `key` 是按鍵，只會有 { 'w', 'a', 's', 'd', ' '}\
-    `seq` 是操作的 sequence number ，用於 client side prediction
+- **遊戲操作** \
+    "`key`,`client_id`,`seq`": \
+        `key` 是按鍵，只會有 { 'w', 'a', 's', 'd', ' '}\
+        `seq` 是操作的 sequence number ，用於 client side prediction
 - **遊戲更新**
     - "u,`client_id`,`x`,`y`,`direction`,`seq`"\
     更新坦克座標
@@ -98,14 +102,14 @@ Arch Linux / macOS / Ubuntu
     2. server 傳送 "`client_id`\\n"，
     3. client 傳送 "`client_id`,`user_name`\\n"
     4. client 傳送 "join,`room_id`\\n"
-    5. server 回傳 "fail\n" 代表加入失敗，"join,`room_id`\\n"代表加入成功
+    5. server 回傳 "fail\\n" 代表加入失敗，"join,`room_id`\\n"代表加入成功
 - 在房間中
     - client 收到 "host,`room_id`\\n" 代表此 client 成為房主
     - client 送出 "exit,`room_id`\\n" 以退出房間， server 會通知新成為房主的 client
     - client 斷線則等同於退出房間
     - 房主送出 "start,`room_id`\\n"，若房間至少有兩個人就會開始遊戲
 - 開始遊戲
-    1. server 送出 "start,`player_count`\\n`client_id`,`user_name`\\n...seed,`seed_number`\n"
+    1. server 送出 "start,`player_count`\\n`client_id`,`user_name`\\n...seed,`seed_number`\\n"
     2. server 和 client 間開始用 UDP 同步遊戲資訊
     3. client 血量歸 0 後切斷 TCP 連線
     4. 若 client 斷線則視為退出遊戲，血量歸 0
